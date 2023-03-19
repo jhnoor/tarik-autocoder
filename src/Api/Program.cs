@@ -1,6 +1,7 @@
 
 using FluentValidation.AspNetCore;
 using NSwag;
+using Tarik.Application.Common;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,8 +13,10 @@ builder.WebHost.ConfigureKestrel(opt =>
     opt.AddServerHeader = false;
 });
 
+builder.Services.Configure<AppSettings>(builder.Configuration);
+
 builder.Services.AddApplicationServices();
-builder.Services.AddInfrastructureServices(builder.Configuration);
+builder.Services.AddInfrastructureServices();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddHealthChecks();
