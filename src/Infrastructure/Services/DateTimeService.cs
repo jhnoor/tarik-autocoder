@@ -1,6 +1,6 @@
 ﻿using Tarik.Application.Common;
 
-namespace Tarik.Infrastructure.Services;
+namespace Tarik.Infrastructure;
 
 public class DateTimeService : IDateTimeService
 {
