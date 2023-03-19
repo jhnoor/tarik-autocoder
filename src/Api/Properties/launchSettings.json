@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "Tarik.Api": {
+      "commandName": "Project",
+      "launchBrowser": false,
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "http://localhost:40321;"
+    }
+  }
+}
