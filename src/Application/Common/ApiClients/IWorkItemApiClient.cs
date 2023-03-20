@@ -10,6 +10,7 @@ public interface IWorkItemApiClient
     Task<int> Comment(int id, string comment, CancellationToken cancellationToken);
     public Task<List<WorkItemDTO>> GetOpenWorkItems(CancellationToken cancellationToken);
     Task LabelAwaitingPlanApproval(int id, CancellationToken cancellationToken);
-    Task LabelAwaitingImplementation(int id, CancellationToken cancellationToken);
+    Task LabelAwaitingImplementation(int id, CommentDTO approvedPlanComment, CancellationToken cancellationToken);
     Task LabelAwaitingCodeReview(int id, CancellationToken cancellationToken);
+    Task<List<CommentDTO>> GetCommentsAsync(int id);
 }

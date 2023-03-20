@@ -53,6 +53,13 @@ public class GitHubIssuesApiClient : IWorkItemApiClient
         return response.Id;
     }
 
+    public async Task<List<CommentDTO>> GetCommentsAsync(int id)
+    {
+        var currentUser = await _gitHubClient.User.Current();
+        var comments = await _gitHubClient.Issue.Comment.GetAllForIssue(_repoOwner, _repoName, id);
+        return comments.Select(c => new CommentDTO(c, currentUser)).ToList();
+    }
+
     public async Task<List<WorkItemDTO>> GetOpenWorkItems(CancellationToken cancellationToken)
     {
         var request = new RepositoryIssueRequest
@@ -75,9 +82,12 @@ public class GitHubIssuesApiClient : IWorkItemApiClient
         throw new NotImplementedException();
     }
 
-    public Task LabelAwaitingImplementation(int id, CancellationToken cancellationToken)
+    public async Task LabelAwaitingImplementation(int id, CommentDTO approvedPlanComment, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        await _gitHubClient.Issue.Comment.Update(_repoOwner, _repoName, approvedPlanComment.Id, $"{approvedPlanComment.Body}\n\n Plan approved! ✅");
+
+        await _gitHubClient.Issue.Labels.RemoveFromIssue(_repoOwner, _repoName, id, StateMachineLabel.AutoCodeAwaitingPlanApproval.ToLabelString());
+        await _gitHubClient.Issue.Labels.AddToIssue(_repoOwner, _repoName, id, new string[] { StateMachineLabel.AutoCodeAwaitingImplementation.ToLabelString() });
     }
 
     public async Task LabelAwaitingPlanApproval(int id, CancellationToken cancellationToken)
