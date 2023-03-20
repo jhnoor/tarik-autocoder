@@ -30,14 +30,17 @@ public class WorkCommand : IRequest<Unit>
 
             switch (state)
             {
-                case StateMachineLabel.AutoCodeInit:
+                case StateMachineLabel.AutoCodeAwaitingImplementation:
+                    throw new NotImplementedException();
+                case StateMachineLabel.AutoCodeAwaitingCodeReview:
+                    throw new NotImplementedException();
+                case StateMachineLabel.AutoCodeAwaitingPlanApproval:
+                    throw new NotImplementedException();
+                default:
                     var planWorkCommandResponse = await _mediator.Send(new PlanWorkCommand(request.WorkItem), cancellationToken);
                     var commentId = await _workItemApiClient.Comment(request.WorkItem.Id, planWorkCommandResponse.Response, cancellationToken);
                     await _workItemApiClient.LabelAwaitingPlanApproval(request.WorkItem.Id, cancellationToken);
                     break;
-
-                default:
-                    throw new ArgumentException($"Unknown state: {state}.");
             }
 
             return Unit.Value;

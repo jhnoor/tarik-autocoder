@@ -53,23 +53,21 @@ public class GitHubIssuesApiClient : IWorkItemApiClient
         return response.Id;
     }
 
-    public async Task<List<WorkItemDTO>> GetWorkItems(CancellationToken cancellationToken)
+    public async Task<List<WorkItemDTO>> GetOpenWorkItems(CancellationToken cancellationToken)
     {
         var request = new RepositoryIssueRequest
         {
             Filter = IssueFilter.Assigned,
-            State = ItemStateFilter.Open,
-            Labels =
-            {
-                StateMachineLabel.AutoCodeInit.ToLabelString(),
-                // StateMachineLabel.AutoCodeAwaitingPlanApproval.ToLabelString(),
-                // StateMachineLabel.AutoCodeAwaitingImplementation.ToLabelString(),
-                // StateMachineLabel.AutoCodeAwaitingCodeReview.ToLabelString()
-            }
+            State = ItemStateFilter.Open
         };
 
+        var currentUser = await _gitHubClient.User.Current();
         var issues = await _gitHubClient.Issue.GetAllForRepository(_repoOwner, _repoName, request);
-        return issues.Select(issue => new WorkItemDTO(issue)).ToList();
+
+        return issues
+            .Where(issue => issue.Assignees.Select(a => a.Id).Contains(currentUser.Id))
+            .Select(issue => new WorkItemDTO(issue))
+            .ToList();
     }
 
     public Task LabelAwaitingCodeReview(int id, CancellationToken cancellationToken)

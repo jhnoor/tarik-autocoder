@@ -35,7 +35,7 @@ public class WorkItemPollerService : BackgroundService
             {
                 _logger.LogInformation("Polling for assigned work items...");
 
-                var workItems = await _workItemApiClient.GetWorkItems(cancellationToken);
+                var workItems = await _workItemApiClient.GetOpenWorkItems(cancellationToken);
 
                 foreach (var workItem in workItems)
                 {

@@ -2,8 +2,7 @@ namespace Tarik.Application.Common;
 
 public enum StateMachineLabel
 {
-    // auto-code:init (initial state, awaiting processing by Tarik)
-    AutoCodeInit,
+    Init,
     // auto-code:awaiting-plan-approval (awaiting plan approval by manager)
     AutoCodeAwaitingPlanApproval,
     // auto-code:awaiting-implementation (awaiting implementation by Tarik)
@@ -18,7 +17,6 @@ public static class StateMachineLabelExtensions
     {
         return stateMachineLabel switch
         {
-            StateMachineLabel.AutoCodeInit => "auto-code:init",
             StateMachineLabel.AutoCodeAwaitingPlanApproval => "auto-code:awaiting-plan-approval",
             StateMachineLabel.AutoCodeAwaitingImplementation => "auto-code:awaiting-implementation",
             StateMachineLabel.AutoCodeAwaitingCodeReview => "auto-code:awaiting-code-review",
@@ -30,7 +28,6 @@ public static class StateMachineLabelExtensions
     {
         return labelString switch
         {
-            "auto-code:init" => StateMachineLabel.AutoCodeInit,
             "auto-code:awaiting-plan-approval" => StateMachineLabel.AutoCodeAwaitingPlanApproval,
             "auto-code:awaiting-implementation" => StateMachineLabel.AutoCodeAwaitingImplementation,
             "auto-code:awaiting-code-review" => StateMachineLabel.AutoCodeAwaitingCodeReview,

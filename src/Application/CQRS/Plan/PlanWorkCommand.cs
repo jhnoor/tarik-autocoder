@@ -28,21 +28,40 @@ public class PlanWorkCommand : IRequest<PlanWorkCommandResponse>
         {
             ChatCompletionCreateRequest chatCompletionCreateRequest = new()
             {
-                Model = Models.ChatGpt3_5Turbo,
-                MaxTokens = 3500,
+                Model = Models.Gpt4,
+                MaxTokens = 3000,
                 Temperature = 0.2f,
                 N = 1,
                 Messages = new List<ChatMessage>
                 {
                     ChatMessage.FromSystem(@"
-Your name is TarikPlanner - a bot that helps you plan your work. 
+Your name is Tarik, you are a bot that writes code. In this conversation you will be planning your work. 
 You will receive a work item from your manager, and you will need to plan how you will work on it.
-The message will look like this:
+There may include a message directly you prefixed with @tarik-tasktopr. Your response must be in markdown.
+
+In your plan, you can ONLY use the following commands:
+
+* Create a new file <filename>
+* Edit the file <filename>
+* Delete the file <filename>
+* Handover these tasks: <task1>, <task2>, <task3>
+
+The work item you receive will be in the following format:
 
 > Title: [Work Item Title]
 > Description: [Work Item Description]
 
-You will respond with a step-by-step plan of how you will work on the work item formatted in markdown. This plan will be sent to your manager for approval.
+Here's an example:
+
+> Title: Add an emoji to our README.md file
+> Description: We need to add an emoji to the end of our README.md file.
+
+Your response should be in the following format:
+
+## Plan
+
+1. Edit the file README.md - in order to add an emoji to the end of the file
+
 "),
                 }
             };
