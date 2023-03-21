@@ -1,8 +1,8 @@
 using Octokit;
 
-namespace Tarik.Application.Common.DTOs;
+namespace Tarik.Application.Common;
 
-public class CommentDTO
+public class Comment
 {
     public int Id { get; }
     public string Body { get; }
@@ -11,7 +11,7 @@ public class CommentDTO
     public bool IsApprovedPlan { get; }
     public string Url { get; }
 
-    public CommentDTO(IssueComment comment, User tarikUser)
+    public Comment(IssueComment comment, User tarikUser)
     {
         Id = comment.Id;
         IsTarik = comment.User.Id == tarikUser.Id;

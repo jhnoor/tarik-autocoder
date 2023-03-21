@@ -1,4 +1,4 @@
-using Tarik.Application.Common.DTOs;
+
 
 namespace Tarik.Application.Common;
 
@@ -8,9 +8,9 @@ namespace Tarik.Application.Common;
 public interface IWorkItemApiClient
 {
     Task<int> Comment(int id, string comment, CancellationToken cancellationToken);
-    public Task<List<WorkItemDTO>> GetOpenWorkItems(CancellationToken cancellationToken);
+    public Task<List<WorkItem>> GetOpenWorkItems(CancellationToken cancellationToken);
     Task LabelAwaitingPlanApproval(int id, CancellationToken cancellationToken);
-    Task LabelAwaitingImplementation(int id, CommentDTO approvedPlanComment, CancellationToken cancellationToken);
+    Task LabelAwaitingImplementation(int id, Comment approvedPlanComment, CancellationToken cancellationToken);
     Task LabelAwaitingCodeReview(int id, CancellationToken cancellationToken);
-    Task<List<CommentDTO>> GetCommentsAsync(int id);
+    Task<List<Comment>> GetCommentsAsync(int id);
 }

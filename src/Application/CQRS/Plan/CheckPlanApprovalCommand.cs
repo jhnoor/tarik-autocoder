@@ -2,18 +2,18 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenAI.GPT3.Interfaces;
 using Tarik.Application.Common;
-using Tarik.Application.Common.DTOs;
+
 
 namespace Tarik.Application.CQRS;
 
 public class CheckPlanApprovalCommand : IRequest<Unit>
 {
-    public CheckPlanApprovalCommand(WorkItemDTO workItem)
+    public CheckPlanApprovalCommand(WorkItem workItem)
     {
         WorkItem = workItem;
     }
 
-    public WorkItemDTO WorkItem { get; }
+    public WorkItem WorkItem { get; }
 
     public class CheckPlanApprovalCommandHandler : IRequestHandler<CheckPlanApprovalCommand>
     {

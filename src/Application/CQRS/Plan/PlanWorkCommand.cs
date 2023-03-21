@@ -4,18 +4,18 @@ using OpenAI.GPT3.Interfaces;
 using OpenAI.GPT3.ObjectModels;
 using OpenAI.GPT3.ObjectModels.RequestModels;
 using Tarik.Application.Common;
-using Tarik.Application.Common.DTOs;
+
 
 namespace Tarik.Application.CQRS;
 
 public class PlanWorkCommand : IRequest<Unit>
 {
-    public PlanWorkCommand(WorkItemDTO workItem)
+    public PlanWorkCommand(WorkItem workItem)
     {
         WorkItem = workItem;
     }
 
-    public WorkItemDTO WorkItem { get; }
+    public WorkItem WorkItem { get; }
 
     public class PlanWorkCommandHandler : IRequestHandler<PlanWorkCommand>
     {

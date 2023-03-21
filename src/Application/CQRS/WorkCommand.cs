@@ -1,18 +1,18 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Tarik.Application.Common;
-using Tarik.Application.Common.DTOs;
+
 
 namespace Tarik.Application.CQRS;
 
 public class WorkCommand : IRequest<Unit>
 {
-    public WorkCommand(WorkItemDTO workItem)
+    public WorkCommand(WorkItem workItem)
     {
         WorkItem = workItem;
     }
 
-    public WorkItemDTO WorkItem { get; }
+    public WorkItem WorkItem { get; }
 
     public class WorkCommandHandler : IRequestHandler<WorkCommand>
     {
@@ -37,7 +37,8 @@ public class WorkCommand : IRequest<Unit>
                     await _mediator.Send(new PlanWorkCommand(request.WorkItem), cancellationToken);
                     break;
                 case StateMachineLabel.AutoCodeAwaitingImplementation:
-                    throw new NotImplementedException();
+                    await _mediator.Send(new ImplementWorkCommand(request.WorkItem), cancellationToken);
+                    break;
                 case StateMachineLabel.AutoCodeAwaitingCodeReview:
                     throw new NotImplementedException();
                 case StateMachineLabel.AutoCodeAwaitingPlanApproval:

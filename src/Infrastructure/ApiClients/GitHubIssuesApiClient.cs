@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Options;
 using Octokit;
 using Tarik.Application.Common;
-using Tarik.Application.Common.DTOs;
+
 
 namespace Tarik.Infrastructure;
 
@@ -53,14 +53,14 @@ public class GitHubIssuesApiClient : IWorkItemApiClient
         return response.Id;
     }
 
-    public async Task<List<CommentDTO>> GetCommentsAsync(int id)
+    public async Task<List<Comment>> GetCommentsAsync(int id)
     {
         var currentUser = await _gitHubClient.User.Current();
         var comments = await _gitHubClient.Issue.Comment.GetAllForIssue(_repoOwner, _repoName, id);
-        return comments.Select(c => new CommentDTO(c, currentUser)).ToList();
+        return comments.Select(c => new Comment(c, currentUser)).ToList();
     }
 
-    public async Task<List<WorkItemDTO>> GetOpenWorkItems(CancellationToken cancellationToken)
+    public async Task<List<WorkItem>> GetOpenWorkItems(CancellationToken cancellationToken)
     {
         var request = new RepositoryIssueRequest
         {
@@ -73,7 +73,7 @@ public class GitHubIssuesApiClient : IWorkItemApiClient
 
         return issues
             .Where(issue => issue.Assignees.Select(a => a.Id).Contains(currentUser.Id))
-            .Select(issue => new WorkItemDTO(issue))
+            .Select(issue => new WorkItem(issue))
             .ToList();
     }
 
@@ -82,7 +82,7 @@ public class GitHubIssuesApiClient : IWorkItemApiClient
         throw new NotImplementedException();
     }
 
-    public async Task LabelAwaitingImplementation(int id, CommentDTO approvedPlanComment, CancellationToken cancellationToken)
+    public async Task LabelAwaitingImplementation(int id, Comment approvedPlanComment, CancellationToken cancellationToken)
     {
         await _gitHubClient.Issue.Comment.Update(_repoOwner, _repoName, approvedPlanComment.Id, $"{approvedPlanComment.Body}\n\n Plan approved! ✅");
 
