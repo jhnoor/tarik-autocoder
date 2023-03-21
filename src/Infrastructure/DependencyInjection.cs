@@ -10,6 +10,7 @@ public static class DependencyInjection
     {
         services.AddTransient<IWorkItemApiClient, GitHubIssuesApiClient>();
         services.AddTransient<IDateTimeService, DateTimeService>();
+        services.AddTransient<IFileService, FileService>();
 
         services.AddOpenAIService();
 

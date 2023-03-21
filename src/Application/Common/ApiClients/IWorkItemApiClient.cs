@@ -7,10 +7,9 @@ namespace Tarik.Application.Common;
 /// </summary>
 public interface IWorkItemApiClient
 {
-    Task<int> Comment(int id, string comment, CancellationToken cancellationToken);
+    Task<int> Comment(int workItemId, string comment, CancellationToken cancellationToken);
     public Task<List<WorkItem>> GetOpenWorkItems(CancellationToken cancellationToken);
-    Task LabelAwaitingPlanApproval(int id, CancellationToken cancellationToken);
-    Task LabelAwaitingImplementation(int id, Comment approvedPlanComment, CancellationToken cancellationToken);
-    Task LabelAwaitingCodeReview(int id, CancellationToken cancellationToken);
+    Task Label(int workItemId, List<StateMachineLabel> addLabels, List<StateMachineLabel> removeLabels, CancellationToken cancellationToken);
+    Task Label(int workItemId, StateMachineLabel replacementLabel, CancellationToken cancellationToken);
     Task<List<Comment>> GetCommentsAsync(int id);
 }

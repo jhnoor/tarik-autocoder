@@ -2,8 +2,8 @@ using MediatR;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Tarik.Application.Brain;
 using Tarik.Application.Common;
-using Tarik.Application.CQRS;
 
 namespace Tarik.Infrastructure;
 

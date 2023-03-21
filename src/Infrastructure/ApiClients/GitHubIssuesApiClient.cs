@@ -47,16 +47,16 @@ public class GitHubIssuesApiClient : IWorkItemApiClient
         };
     }
 
-    public async Task<int> Comment(int id, string comment, CancellationToken cancellationToken)
+    public async Task<int> Comment(int workItemId, string comment, CancellationToken cancellationToken)
     {
-        var response = await _gitHubClient.Issue.Comment.Create(_repoOwner, _repoName, id, comment);
+        var response = await _gitHubClient.Issue.Comment.Create(_repoOwner, _repoName, workItemId, comment);
         return response.Id;
     }
 
-    public async Task<List<Comment>> GetCommentsAsync(int id)
+    public async Task<List<Comment>> GetCommentsAsync(int workItemId)
     {
         var currentUser = await _gitHubClient.User.Current();
-        var comments = await _gitHubClient.Issue.Comment.GetAllForIssue(_repoOwner, _repoName, id);
+        var comments = await _gitHubClient.Issue.Comment.GetAllForIssue(_repoOwner, _repoName, workItemId);
         return comments.Select(c => new Comment(c, currentUser)).ToList();
     }
 
@@ -75,6 +75,30 @@ public class GitHubIssuesApiClient : IWorkItemApiClient
             .Where(issue => issue.Assignees.Select(a => a.Id).Contains(currentUser.Id))
             .Select(issue => new WorkItem(issue))
             .ToList();
+    }
+
+    public async Task Label(int workItemId, List<StateMachineLabel> addLabels, List<StateMachineLabel> removeLabels, CancellationToken cancellationToken)
+    {
+        foreach (var label in removeLabels)
+        {
+            try
+            {
+                await _gitHubClient.Issue.Labels.RemoveFromIssue(_repoOwner, _repoName, workItemId, label.ToLabelString());
+            }
+            catch (Octokit.NotFoundException)
+            {
+                // Ignore
+            }
+        }
+
+        var labels = addLabels.Select(l => l.ToLabelString()).ToArray();
+        await _gitHubClient.Issue.Labels.AddToIssue(_repoOwner, _repoName, workItemId, labels);
+    }
+
+    public async Task Label(int workItemId, StateMachineLabel replacementLabel, CancellationToken cancellationToken)
+    {
+        var allStateMachineLabels = Enum.GetValues(typeof(StateMachineLabel)).Cast<StateMachineLabel>().Where(l => l != StateMachineLabel.Init).ToList();
+        await Label(workItemId, new List<StateMachineLabel> { replacementLabel }, allStateMachineLabels, cancellationToken);
     }
 
     public Task LabelAwaitingCodeReview(int id, CancellationToken cancellationToken)

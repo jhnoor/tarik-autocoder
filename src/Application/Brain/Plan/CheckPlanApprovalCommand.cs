@@ -4,7 +4,7 @@ using OpenAI.GPT3.Interfaces;
 using Tarik.Application.Common;
 
 
-namespace Tarik.Application.CQRS;
+namespace Tarik.Application.Brain;
 
 public class CheckPlanApprovalCommand : IRequest<Unit>
 {
@@ -43,8 +43,8 @@ public class CheckPlanApprovalCommand : IRequest<Unit>
             }
 
             _logger.LogDebug($"Found approved plan comment: {approvedPlanComment.Url}");
-            await _workItemApiClient.LabelAwaitingImplementation(request.WorkItem.Id, approvedPlanComment, cancellationToken);
-
+            await _workItemApiClient.Comment(request.WorkItem.Id, $"{approvedPlanComment.Body}\n\n EDIT: Plan approved! ✅", cancellationToken);
+            await _workItemApiClient.Label(request.WorkItem.Id, StateMachineLabel.AutoCodeAwaitingImplementation, cancellationToken);
             return Unit.Value;
         }
     }

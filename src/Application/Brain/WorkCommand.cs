@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using Tarik.Application.Common;
 
 
-namespace Tarik.Application.CQRS;
+namespace Tarik.Application.Brain;
 
 public class WorkCommand : IRequest<Unit>
 {
@@ -37,13 +37,18 @@ public class WorkCommand : IRequest<Unit>
                     await _mediator.Send(new PlanWorkCommand(request.WorkItem), cancellationToken);
                     break;
                 case StateMachineLabel.AutoCodeAwaitingImplementation:
-                    await _mediator.Send(new ImplementWorkCommand(request.WorkItem), cancellationToken);
+                    Plan plan = await _mediator.Send(new ParsePlanCommand(request.WorkItem), cancellationToken);
+                    await _mediator.Send(new ExecutePlanCommand(request.WorkItem, plan), cancellationToken);
                     break;
                 case StateMachineLabel.AutoCodeAwaitingCodeReview:
                     throw new NotImplementedException();
                 case StateMachineLabel.AutoCodeAwaitingPlanApproval:
                     await _mediator.Send(new CheckPlanApprovalCommand(request.WorkItem), cancellationToken);
                     break;
+                case StateMachineLabel.AutoCodeFailExecution:
+                    throw new NotImplementedException();
+                case StateMachineLabel.AutoCodeFailPlanNotParsable:
+                    throw new NotImplementedException();
                 default:
                     throw new ArgumentException($"Unknown state: {state}");
             }

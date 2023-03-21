@@ -6,7 +6,7 @@ using OpenAI.GPT3.ObjectModels.RequestModels;
 using Tarik.Application.Common;
 
 
-namespace Tarik.Application.CQRS;
+namespace Tarik.Application.Brain;
 
 public class PlanWorkCommand : IRequest<Unit>
 {
@@ -93,7 +93,7 @@ Your response should be in the following format:
 
             _logger.LogDebug($"AI response: {chatResponse.Choices.First().Message.Content}");
             var commentId = await _workItemApiClient.Comment(request.WorkItem.Id, chatResponse.Choices.First().Message.Content, cancellationToken);
-            await _workItemApiClient.LabelAwaitingPlanApproval(request.WorkItem.Id, cancellationToken);
+            await _workItemApiClient.Label(request.WorkItem.Id, StateMachineLabel.AutoCodeAwaitingPlanApproval, cancellationToken);
 
             return Unit.Value;
         }
