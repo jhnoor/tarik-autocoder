@@ -1,3 +1,4 @@
+using System.Text;
 using Microsoft.Extensions.Options;
 using Octokit;
 using Tarik.Application.Common;
@@ -43,43 +44,63 @@ public class FileService : IFileService
         };
     }
 
-    public async Task CreateFile(string path, string content, string branchName, CancellationToken cancellationToken)
+    public async Task CreateFile(string path, string content, Reference branch, CancellationToken cancellationToken)
     {
-        await _gitHubClient.Repository.Content.CreateFile(_repoOwner, _repoName, path, new CreateFileRequest("Create file", content, $"refs/heads/{branchName}"));
+        var createFileRequest = new CreateFileRequest($"Create {path}", content, branch.Ref, true);
+        try
+        {
+            await _gitHubClient.Repository.Content.CreateFile(_repoOwner, _repoName, path, createFileRequest);
+        }
+        catch (Octokit.ApiValidationException e)
+        {
+            if (e.Message.Contains("\"sha\" wasn't supplied"))
+            {
+                // File already exists
+                return;
+            }
+            else
+            {
+                throw;
+            }
+        }
     }
 
-    public Task DeleteFile(string path, string branchName, CancellationToken cancellationToken)
+    public Task DeleteFile(string path, Reference branch, CancellationToken cancellationToken)
     {
         throw new NotImplementedException();
     }
 
-    public Task<string> GetFileContent(string path, string branchName, CancellationToken cancellationToken)
+    public async Task<string> GetFileContent(string path, Reference branch, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        var bytes = await _gitHubClient.Repository.Content.GetRawContentByRef(_repoOwner, _repoName, path, branch.Ref);
+        return Encoding.UTF8.GetString(bytes);
     }
 
-    public Task<string> Tree(string path, CancellationToken cancellationToken)
+    public async Task<string> Tree(string path, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        var files = await _gitHubClient.Repository.Content.GetAllContents(_repoOwner, _repoName, path);
+        return string.Join(Environment.NewLine, files.Select(f => f.Name));
     }
 
-    public Task EditFile(string path, string content, string branchName, CancellationToken cancellationToken)
+    public async Task EditFile(string path, string content, Reference branch, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        var existingFileHash = (await _gitHubClient.Repository.Content.GetAllContentsByRef(_repoOwner, _repoName, path, branch.Ref)).Single().Sha;
+        var updateFileRequest = new UpdateFileRequest($"Update {path}", content, existingFileHash, branch.Ref, true);
+        await _gitHubClient.Repository.Content.UpdateFile(_repoOwner, _repoName, path, updateFileRequest);
     }
 
-    public async Task CreateBranch(string branchName, CancellationToken cancellationToken)
+    public async Task<Reference> CreateBranch(string branchName, CancellationToken cancellationToken)
     {
         try
         {
             var main = await _gitHubClient.Git.Reference.Get(_repoOwner, _repoName, "heads/main");
-            var newBranch = await _gitHubClient.Git.Reference.Create(_repoOwner, _repoName, new NewReference($"refs/heads/{branchName}", main.Object.Sha));
+            return await _gitHubClient.Git.Reference.Create(_repoOwner, _repoName, new NewReference($"refs/heads/{branchName}", main.Object.Sha));
         }
         catch (Octokit.ApiValidationException e)
         {
             if (e.Message.Contains("Reference already exists"))
             {
-                return;
+                return await _gitHubClient.Git.Reference.Get(_repoOwner, _repoName, $"refs/heads/{branchName}");
             }
             else
             {

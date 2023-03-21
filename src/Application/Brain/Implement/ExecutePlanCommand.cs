@@ -36,18 +36,18 @@ public class ExecutePlanCommand : IRequest<Unit>
         public async Task<Unit> Handle(ExecutePlanCommand request, CancellationToken cancellationToken)
         {
             _logger.LogDebug($"Implementing work item {request.WorkItem.Id} - Executing plan");
+            var branchName = $"tarik/{request.WorkItem.Id}-{request.WorkItem.Title.ToLower().Replace(' ', '-')}";
 
             try
             {
-                var branchName = $"tarik/{request.WorkItem.Id}-{request.WorkItem.Title.ToLower().Replace(' ', '-')}";
-                await _fileService.CreateBranch(branchName, cancellationToken);
+                var branchRef = await _fileService.CreateBranch(branchName, cancellationToken);
 
                 foreach (var createFileStep in request.Plan.CreateFileSteps)
                 {
                     if (createFileStep.Path == null)
                         throw new ArgumentException("Path is required for CreateFilePlanStep");
 
-                    await _fileService.CreateFile(createFileStep.Path, "<NOTHING>", branchName, cancellationToken);
+                    await _fileService.CreateFile(createFileStep.Path, "<NOTHING>", branchRef, cancellationToken);
                 }
 
                 var rootTree = await _fileService.Tree("/", cancellationToken);
@@ -56,10 +56,10 @@ public class ExecutePlanCommand : IRequest<Unit>
                     if (editFileStep.Path == null)
                         throw new ArgumentException("Path is required for EditFilePlanStep");
 
-                    editFileStep.CurrentContent = await _fileService.GetFileContent(editFileStep.Path, branchName, cancellationToken);
+                    editFileStep.CurrentContent = await _fileService.GetFileContent(editFileStep.Path, branchRef, cancellationToken);
                     editFileStep.AISuggestedContent = await GenerateContent(editFileStep, rootTree, cancellationToken);
 
-                    await _fileService.EditFile(editFileStep.Path, editFileStep.AISuggestedContent, branchName, cancellationToken);
+                    await _fileService.EditFile(editFileStep.Path, editFileStep.AISuggestedContent, branchRef, cancellationToken);
                 }
 
             }
@@ -69,6 +69,9 @@ public class ExecutePlanCommand : IRequest<Unit>
                 await _workItemApiClient.Label(request.WorkItem.Id, StateMachineLabel.AutoCodeFailExecution, cancellationToken);
                 throw;
             }
+
+            _logger.LogDebug($"Branch {branchName} created and updated for work item {request.WorkItem.Id}");
+            await _workItemApiClient.Label(request.WorkItem.Id, StateMachineLabel.AutoCodeAwaitingCodeReview, cancellationToken);
 
             return Unit.Value;
         }
