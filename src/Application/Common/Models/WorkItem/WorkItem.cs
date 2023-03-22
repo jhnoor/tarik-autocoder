@@ -1,8 +1,8 @@
 using Octokit;
 
-namespace Tarik.Application.Common.DTOs;
+namespace Tarik.Application.Common;
 
-public class WorkItemDTO
+public class WorkItem
 {
     public int Id { get; }
     public string Title { get; }
@@ -13,7 +13,7 @@ public class WorkItemDTO
     public string Body { get; }
     public DateTime? UpdatedDate { get; }
 
-    public WorkItemDTO(Issue issue)
+    public WorkItem(Issue issue)
     {
         Id = issue.Number;
         Title = issue.Title;
