@@ -2,19 +2,19 @@ using MediatR;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Tarik.Application.Brain;
 using Tarik.Application.Common;
-using Tarik.Application.CQRS;
 
 namespace Tarik.Infrastructure;
 
 public class WorkItemPollerService : BackgroundService
 {
     private readonly ILogger<WorkItemPollerService> _logger;
-    private readonly IWorkItemApiClient _workItemApiClient;
+    private readonly IWorkItemService _workItemApiClient;
     private readonly ISender _mediator;
     private readonly TimeSpan _pollingInterval;
 
-    public WorkItemPollerService(ILogger<WorkItemPollerService> logger, IWorkItemApiClient workItemApiClient, IOptions<AppSettings> appSettings, ISender mediator)
+    public WorkItemPollerService(ILogger<WorkItemPollerService> logger, IWorkItemService workItemApiClient, IOptions<AppSettings> appSettings, ISender mediator)
     {
         _logger = logger;
         _workItemApiClient = workItemApiClient;
@@ -35,7 +35,7 @@ public class WorkItemPollerService : BackgroundService
             {
                 _logger.LogInformation("Polling for assigned work items...");
 
-                var workItems = await _workItemApiClient.GetWorkItems(cancellationToken);
+                var workItems = await _workItemApiClient.GetOpenWorkItems(cancellationToken);
 
                 foreach (var workItem in workItems)
                 {
