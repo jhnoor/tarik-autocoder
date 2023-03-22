@@ -20,10 +20,10 @@ public class ParsePlanCommand : IRequest<Plan>
     public class ParsePlanCommandHandler : IRequestHandler<ParsePlanCommand, Plan>
     {
         private readonly IOpenAIService _openAIService;
-        private readonly IWorkItemApiClient _workItemApiClient;
+        private readonly IWorkItemService _workItemApiClient;
         private readonly ILogger<ParsePlanCommandHandler> _logger;
 
-        public ParsePlanCommandHandler(IOpenAIService openAIService, IWorkItemApiClient workItemApiClient, ILogger<ParsePlanCommandHandler> logger)
+        public ParsePlanCommandHandler(IOpenAIService openAIService, IWorkItemService workItemApiClient, ILogger<ParsePlanCommandHandler> logger)
         {
             _openAIService = openAIService;
             _workItemApiClient = workItemApiClient;
@@ -36,8 +36,6 @@ public class ParsePlanCommand : IRequest<Plan>
 
             try
             {
-
-
                 var comments = await _workItemApiClient.GetCommentsAsync(request.WorkItem.Id);
 
                 var approvedPlanComment = comments.FirstOrDefault(c => c.IsApprovedPlan);

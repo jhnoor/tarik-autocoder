@@ -17,10 +17,10 @@ public class WorkCommand : IRequest<Unit>
     public class WorkCommandHandler : IRequestHandler<WorkCommand>
     {
         private readonly ISender _mediator;
-        private readonly IWorkItemApiClient _workItemApiClient;
+        private readonly IWorkItemService _workItemApiClient;
         private readonly ILogger<WorkCommandHandler> _logger;
 
-        public WorkCommandHandler(ISender mediator, IWorkItemApiClient workItemApiClient, ILogger<WorkCommandHandler> logger)
+        public WorkCommandHandler(ISender mediator, IWorkItemService workItemApiClient, ILogger<WorkCommandHandler> logger)
         {
             _mediator = mediator;
             _workItemApiClient = workItemApiClient;
@@ -41,7 +41,8 @@ public class WorkCommand : IRequest<Unit>
                     await _mediator.Send(new ExecutePlanCommand(request.WorkItem, plan), cancellationToken);
                     break;
                 case StateMachineLabel.AutoCodeAwaitingCodeReview:
-                    throw new NotImplementedException();
+                    _logger.LogDebug($"Work item #{request.WorkItem.Id} has been implemented - Awaiting code review");
+                    break;
                 case StateMachineLabel.AutoCodeAwaitingPlanApproval:
                     await _mediator.Send(new CheckPlanApprovalCommand(request.WorkItem), cancellationToken);
                     break;

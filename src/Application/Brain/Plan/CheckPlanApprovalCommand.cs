@@ -18,10 +18,10 @@ public class CheckPlanApprovalCommand : IRequest<Unit>
     public class CheckPlanApprovalCommandHandler : IRequestHandler<CheckPlanApprovalCommand>
     {
         private readonly IOpenAIService _openAIService;
-        private readonly IWorkItemApiClient _workItemApiClient;
+        private readonly IWorkItemService _workItemApiClient;
         private readonly ILogger<CheckPlanApprovalCommandHandler> _logger;
 
-        public CheckPlanApprovalCommandHandler(IOpenAIService openAIService, IWorkItemApiClient workItemApiClient, ILogger<CheckPlanApprovalCommandHandler> logger)
+        public CheckPlanApprovalCommandHandler(IOpenAIService openAIService, IWorkItemService workItemApiClient, ILogger<CheckPlanApprovalCommandHandler> logger)
         {
             _openAIService = openAIService;
             _workItemApiClient = workItemApiClient;
@@ -43,7 +43,7 @@ public class CheckPlanApprovalCommand : IRequest<Unit>
             }
 
             _logger.LogDebug($"Found approved plan comment: {approvedPlanComment.Url}");
-            await _workItemApiClient.Comment(request.WorkItem.Id, $"{approvedPlanComment.Body}\n\n EDIT: Plan approved! ✅", cancellationToken);
+            await _workItemApiClient.EditComment(approvedPlanComment.Id, $"{approvedPlanComment.Body}\n\n EDIT: Plan approved! ✅", cancellationToken);
             await _workItemApiClient.Label(request.WorkItem.Id, StateMachineLabel.AutoCodeAwaitingImplementation, cancellationToken);
             return Unit.Value;
         }

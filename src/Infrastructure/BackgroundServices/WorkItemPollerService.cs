@@ -10,11 +10,11 @@ namespace Tarik.Infrastructure;
 public class WorkItemPollerService : BackgroundService
 {
     private readonly ILogger<WorkItemPollerService> _logger;
-    private readonly IWorkItemApiClient _workItemApiClient;
+    private readonly IWorkItemService _workItemApiClient;
     private readonly ISender _mediator;
     private readonly TimeSpan _pollingInterval;
 
-    public WorkItemPollerService(ILogger<WorkItemPollerService> logger, IWorkItemApiClient workItemApiClient, IOptions<AppSettings> appSettings, ISender mediator)
+    public WorkItemPollerService(ILogger<WorkItemPollerService> logger, IWorkItemService workItemApiClient, IOptions<AppSettings> appSettings, ISender mediator)
     {
         _logger = logger;
         _workItemApiClient = workItemApiClient;

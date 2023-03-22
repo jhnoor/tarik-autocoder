@@ -6,15 +6,15 @@ using Tarik.Application.Common;
 namespace Tarik.Infrastructure;
 
 /// <summary>
-/// The GitHub implementation of <see cref="IWorkItemApiClient"/>.
+/// The GitHub implementation of <see cref="IWorkItemService"/>.
 /// </summary>
-public class GitHubIssuesApiClient : IWorkItemApiClient
+public class GitHubWorkItemService : IWorkItemService
 {
     private readonly GitHubClient _gitHubClient;
     private readonly string _repoOwner;
     private readonly string _repoName;
 
-    public GitHubIssuesApiClient(IOptions<AppSettings> appSettings)
+    public GitHubWorkItemService(IOptions<AppSettings> appSettings)
     {
         var gitHubSettings = appSettings.Value.GitHub;
 
@@ -117,5 +117,10 @@ public class GitHubIssuesApiClient : IWorkItemApiClient
     public async Task LabelAwaitingPlanApproval(int id, CancellationToken cancellationToken)
     {
         await _gitHubClient.Issue.Labels.AddToIssue(_repoOwner, _repoName, id, new string[] { StateMachineLabel.AutoCodeAwaitingPlanApproval.ToLabelString() });
+    }
+
+    public async Task EditComment(int commentId, string comment, CancellationToken cancellationToken)
+    {
+        await _gitHubClient.Issue.Comment.Update(_repoOwner, _repoName, commentId, comment);
     }
 }

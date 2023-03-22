@@ -21,15 +21,17 @@ public class ExecutePlanCommand : IRequest<Unit>
     public class ExecutePlanCommandHandler : IRequestHandler<ExecutePlanCommand>
     {
         private readonly IOpenAIService _openAIService;
-        private readonly IWorkItemApiClient _workItemApiClient;
+        private readonly IWorkItemService _workItemApiClient;
         private readonly Common.IFileService _fileService;
+        private readonly IPullRequestService _pullRequestService;
         private readonly ILogger<ExecutePlanCommandHandler> _logger;
 
-        public ExecutePlanCommandHandler(IOpenAIService openAIService, IWorkItemApiClient workItemApiClient, Common.IFileService fileService, ILogger<ExecutePlanCommandHandler> logger)
+        public ExecutePlanCommandHandler(IOpenAIService openAIService, IWorkItemService workItemApiClient, Common.IFileService fileService, IPullRequestService pullRequestService, ILogger<ExecutePlanCommandHandler> logger)
         {
             _openAIService = openAIService;
             _workItemApiClient = workItemApiClient;
             _fileService = fileService;
+            _pullRequestService = pullRequestService;
             _logger = logger;
         }
 
@@ -40,14 +42,14 @@ public class ExecutePlanCommand : IRequest<Unit>
 
             try
             {
-                var branchRef = await _fileService.CreateBranch(branchName, cancellationToken);
+                var sourceBranch = await _fileService.CreateBranch(branchName, cancellationToken);
 
                 foreach (var createFileStep in request.Plan.CreateFileSteps)
                 {
                     if (createFileStep.Path == null)
                         throw new ArgumentException("Path is required for CreateFilePlanStep");
 
-                    await _fileService.CreateFile(createFileStep.Path, "<NOTHING>", branchRef, cancellationToken);
+                    await _fileService.CreateFile(createFileStep.Path, "<NOTHING>", sourceBranch, cancellationToken);
                 }
 
                 var rootTree = await _fileService.Tree("/", cancellationToken);
@@ -56,12 +58,13 @@ public class ExecutePlanCommand : IRequest<Unit>
                     if (editFileStep.Path == null)
                         throw new ArgumentException("Path is required for EditFilePlanStep");
 
-                    editFileStep.CurrentContent = await _fileService.GetFileContent(editFileStep.Path, branchRef, cancellationToken);
+                    editFileStep.CurrentContent = await _fileService.GetFileContent(editFileStep.Path, sourceBranch, cancellationToken);
                     editFileStep.AISuggestedContent = await GenerateContent(editFileStep, rootTree, cancellationToken);
 
-                    await _fileService.EditFile(editFileStep.Path, editFileStep.AISuggestedContent, branchRef, cancellationToken);
+                    await _fileService.EditFile(editFileStep.Path, editFileStep.AISuggestedContent, sourceBranch, cancellationToken);
                 }
 
+                await _pullRequestService.CreatePullRequest(request.WorkItem, sourceBranch.Ref, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -101,7 +104,7 @@ Make a very good guess at what the content of the file should look like. Respond
             ChatCompletionCreateRequest chatCompletionCreateRequest = new()
             {
                 Model = Models.Gpt4,
-                MaxTokens = 8000,
+                MaxTokens = 7500,
                 Temperature = 0.2f,
                 N = 1,
                 Messages = new List<ChatMessage>

@@ -8,9 +8,11 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services)
     {
-        services.AddTransient<IWorkItemApiClient, GitHubIssuesApiClient>();
+        services.AddTransient<IWorkItemService, GitHubWorkItemService>();
         services.AddTransient<IDateTimeService, DateTimeService>();
         services.AddTransient<IFileService, FileService>();
+        services.AddTransient<IGitHubClientFactory, GitHubClientFactory>();
+        services.AddTransient<IPullRequestService, PullRequestService>();
 
         services.AddOpenAIService();
 

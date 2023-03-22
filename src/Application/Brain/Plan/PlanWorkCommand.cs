@@ -20,10 +20,10 @@ public class PlanWorkCommand : IRequest<Unit>
     public class PlanWorkCommandHandler : IRequestHandler<PlanWorkCommand>
     {
         private readonly IOpenAIService _openAIService;
-        private readonly IWorkItemApiClient _workItemApiClient;
+        private readonly IWorkItemService _workItemApiClient;
         private readonly ILogger<PlanWorkCommandHandler> _logger;
 
-        public PlanWorkCommandHandler(IOpenAIService openAIService, IWorkItemApiClient workItemApiClient, ILogger<PlanWorkCommandHandler> logger)
+        public PlanWorkCommandHandler(IOpenAIService openAIService, IWorkItemService workItemApiClient, ILogger<PlanWorkCommandHandler> logger)
         {
             _openAIService = openAIService;
             _workItemApiClient = workItemApiClient;

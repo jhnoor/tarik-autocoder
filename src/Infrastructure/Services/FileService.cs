@@ -7,11 +7,11 @@ namespace Tarik.Infrastructure;
 
 public class FileService : IFileService
 {
-    private readonly GitHubClient _gitHubClient;
+    private readonly IGitHubClient _gitHubClient;
     private readonly string _repoOwner;
     private readonly string _repoName;
 
-    public FileService(IOptions<AppSettings> appSettings)
+    public FileService(IOptions<AppSettings> appSettings, IGitHubClientFactory gitHubClientFactory)
     {
         var gitHubSettings = appSettings.Value.GitHub;
 
@@ -37,11 +37,7 @@ public class FileService : IFileService
 
         _repoOwner = gitHubSettings.Owner;
         _repoName = gitHubSettings.Repo;
-
-        _gitHubClient = new GitHubClient(new ProductHeaderValue("Tarik"))
-        {
-            Credentials = new Credentials(gitHubSettings.PAT)
-        };
+        _gitHubClient = gitHubClientFactory.CreateGitHubClient();
     }
 
     public async Task CreateFile(string path, string content, Reference branch, CancellationToken cancellationToken)
