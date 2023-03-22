@@ -9,5 +9,5 @@ public interface IFileService
     Task DeleteFile(string path, Reference branch, CancellationToken cancellationToken);
     Task<string> GetFileContent(string path, Reference branch, CancellationToken cancellationToken);
     Task EditFile(string path, string content, Reference branch, CancellationToken cancellationToken);
-    Task<string> Tree(string path, CancellationToken cancellationToken);
+    Task<string> Tree(string path = "/", CancellationToken cancellationToken = default);
 }
