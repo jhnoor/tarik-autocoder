@@ -79,32 +79,14 @@ public class ExecutePlanCommand : IRequest<Unit>
             return Unit.Value;
         }
 
-        private async Task<string> GenerateContent(EditFilePlanStep editStep, string rootTree, CancellationToken cancellationToken)
+        private async Task<string> GenerateContent(EditFilePlanStep editStep, string tree, CancellationToken cancellationToken)
         {
-
-            var prompt = $@"
-You are Tarik, a senior software developer. You are given a task to edit a file. The file is located at:
-
-- {editStep.Path}
-
-This is the current content of the file:
-
-```
-{editStep.CurrentContent}
-``` 
-
-This is the tree view of the repository:
-```
-{rootTree}
-``` 
-
-Make a very good guess at what the content of the file should look like. Respond with only the content.
-            ";
+            var prompt = editStep.GetEditFileStepPrompt(tree);
 
             ChatCompletionCreateRequest chatCompletionCreateRequest = new()
             {
                 Model = Models.Gpt4,
-                MaxTokens = 7500,
+                MaxTokens = 8000 - prompt.Length,
                 Temperature = 0.2f,
                 N = 1,
                 Messages = new List<ChatMessage>
