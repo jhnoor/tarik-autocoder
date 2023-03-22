@@ -8,6 +8,7 @@
     <IsPackable>true</IsPackable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>4f26505a-b791-4eb5-a944-9657444aaa10</UserSecretsId>
+    <LangVersion>11</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>

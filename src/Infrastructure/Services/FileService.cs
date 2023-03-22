@@ -72,7 +72,7 @@ public class FileService : IFileService
         return Encoding.UTF8.GetString(bytes);
     }
 
-    public async Task<string> Tree(string path, CancellationToken cancellationToken)
+    public async Task<string> Tree(string path = "/", CancellationToken cancellationToken = default)
     {
         var files = await _gitHubClient.Repository.Content.GetAllContents(_repoOwner, _repoName, path);
         return string.Join(Environment.NewLine, files.Select(f => f.Name));
