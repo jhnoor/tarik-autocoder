@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Tarik.Application.Common;
 
@@ -18,12 +19,14 @@ public class WorkCommand : IRequest<Unit>
     {
         private readonly ISender _mediator;
         private readonly IWorkItemService _workItemApiClient;
+        private readonly IServiceProvider _serviceProvider;
         private readonly ILogger<WorkCommandHandler> _logger;
 
-        public WorkCommandHandler(ISender mediator, IWorkItemService workItemApiClient, ILogger<WorkCommandHandler> logger)
+        public WorkCommandHandler(ISender mediator, IWorkItemService workItemApiClient, IServiceProvider serviceProvider, ILogger<WorkCommandHandler> logger)
         {
             _mediator = mediator;
             _workItemApiClient = workItemApiClient;
+            _serviceProvider = serviceProvider;
             _logger = logger;
         }
 
@@ -31,14 +34,16 @@ public class WorkCommand : IRequest<Unit>
         {
             var state = RetrieveStateFromLabels(request.WorkItem.Labels);
 
+            using IServiceScope scope = _serviceProvider.CreateScope();
+
             switch (state)
             {
                 case StateMachineLabel.Init:
-                    await _mediator.Send(new PlanWorkCommand(request.WorkItem), cancellationToken);
+                    await _mediator.Send(new PlanWorkCommand(request.WorkItem, scope), cancellationToken);
                     break;
                 case StateMachineLabel.AutoCodeAwaitingImplementation:
                     Plan plan = await _mediator.Send(new ParsePlanCommand(request.WorkItem), cancellationToken);
-                    await _mediator.Send(new ExecutePlanCommand(request.WorkItem, plan), cancellationToken);
+                    await _mediator.Send(new ExecutePlanCommand(request.WorkItem, plan, scope), cancellationToken);
                     break;
                 case StateMachineLabel.AutoCodeAwaitingCodeReview:
                     _logger.LogDebug($"Work item #{request.WorkItem.Id} has been implemented - Awaiting code review");

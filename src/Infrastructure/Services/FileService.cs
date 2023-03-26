@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using System.Text;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Octokit;
 using Tarik.Application.Common;
@@ -7,12 +9,15 @@ namespace Tarik.Infrastructure;
 
 public class FileService : IFileService
 {
+    private string _localDirectory;
     private readonly IGitHubClient _gitHubClient;
     private readonly string _repoOwner;
     private readonly string _repoName;
+    private readonly ILogger<IFileService> _logger;
 
-    public FileService(IOptions<AppSettings> appSettings, IGitHubClientFactory gitHubClientFactory)
+    public FileService(IOptions<AppSettings> appSettings, IGitHubClientFactory gitHubClientFactory, ILogger<IFileService> logger)
     {
+        _logger = logger;
         var gitHubSettings = appSettings.Value.GitHub;
 
         if (gitHubSettings == null)
@@ -38,6 +43,44 @@ public class FileService : IFileService
         _repoOwner = gitHubSettings.Owner;
         _repoName = gitHubSettings.Repo;
         _gitHubClient = gitHubClientFactory.CreateGitHubClient();
+
+        _localDirectory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        Directory.CreateDirectory(_localDirectory);
+
+        CloneRepository();
+    }
+
+    private void CloneRepository()
+    {
+        var repoUrl = $"https://github.com/{_repoOwner}/{_repoName}.git";
+
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = "git",
+            Arguments = $"clone {repoUrl} {_localDirectory}",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+
+        using Process process = new Process { StartInfo = startInfo };
+        process.OutputDataReceived += (sender, e) => _logger.LogDebug(e.Data);
+        process.ErrorDataReceived += (sender, e) => _logger.LogError(e.Data);
+
+        process.Start();
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
+        process.WaitForExit();
+
+        if (process.ExitCode == 0)
+        {
+            _logger.LogDebug($"Repository cloned successfully to {_localDirectory}");
+        }
+        else
+        {
+            throw new InvalidOperationException($"Failed to clone repository to {_localDirectory} from {repoUrl}");
+        }
     }
 
     public async Task CreateFile(string path, string content, Reference branch, CancellationToken cancellationToken)
@@ -72,10 +115,9 @@ public class FileService : IFileService
         return Encoding.UTF8.GetString(bytes);
     }
 
-    public async Task<string> Tree(string path = "/", CancellationToken cancellationToken = default)
+    public string GetPaths()
     {
-        var files = await _gitHubClient.Repository.Content.GetAllContents(_repoOwner, _repoName, path);
-        return string.Join(Environment.NewLine, files.Select(f => f.Name));
+        return FileHelper.GetTree(_localDirectory).SerializePaths(_localDirectory);
     }
 
     public async Task EditFile(string path, string content, Reference branch, CancellationToken cancellationToken)
@@ -101,6 +143,22 @@ public class FileService : IFileService
             else
             {
                 throw;
+            }
+        }
+    }
+
+    public void Dispose()
+    {
+        if (_localDirectory != null)
+        {
+            try
+            {
+                Directory.Delete(_localDirectory, true);
+                _logger.LogDebug($"Deleted temporary repository folder: {_localDirectory}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error deleting temporary repository folder {_localDirectory}");
             }
         }
     }

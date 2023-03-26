@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -14,7 +15,11 @@ public class WorkItemPollerService : BackgroundService
     private readonly ISender _mediator;
     private readonly TimeSpan _pollingInterval;
 
-    public WorkItemPollerService(ILogger<WorkItemPollerService> logger, IWorkItemService workItemApiClient, IOptions<AppSettings> appSettings, ISender mediator)
+    public WorkItemPollerService(
+        ILogger<WorkItemPollerService> logger,
+        IWorkItemService workItemApiClient,
+        IOptions<AppSettings> appSettings,
+        ISender mediator)
     {
         _logger = logger;
         _workItemApiClient = workItemApiClient;
