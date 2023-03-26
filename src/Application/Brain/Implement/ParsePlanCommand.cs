@@ -1,9 +1,5 @@
-using System.Text.Json;
 using MediatR;
 using Microsoft.Extensions.Logging;
-using OpenAI.GPT3.Interfaces;
-using OpenAI.GPT3.ObjectModels;
-using OpenAI.GPT3.ObjectModels.RequestModels;
 using Tarik.Application.Common;
 
 namespace Tarik.Application.Brain;

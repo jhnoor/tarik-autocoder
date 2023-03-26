@@ -10,8 +10,8 @@ public class Plan
 
     public Plan(string approvedPlan)
     {
-        string editMatchPattern = @"\d+\.\s*Edit the file\s*([^:]+):\s*(?<group>.+)\n";
-        string createMatchPattern = @"\d+\.\s*Create the file\s*([^:]+):\s*(?<group>.+)\n";
+        string editMatchPattern = @"\d+\.\s*Edit the file\s*([^|]+)\s\|\s*(.*)\n";
+        string createMatchPattern = @"\d+\.\s*Create a new file\s*([^|]+)\s\|\s*(.*)\n";
 
         var editMatches = Regex.Matches(approvedPlan, editMatchPattern, RegexOptions.IgnoreCase | RegexOptions.Multiline, TimeSpan.FromSeconds(1));
         var createMatches = Regex.Matches(approvedPlan, createMatchPattern, RegexOptions.IgnoreCase | RegexOptions.Multiline, TimeSpan.FromSeconds(1));
@@ -20,7 +20,7 @@ public class Plan
         {
             var step = new EditFilePlanStep
             {
-                Path = match.Groups[1].Value.Trim(),
+                Path = match.Groups[1].Value.Trim().TrimStart('/'),
                 Reason = match.Groups[2].Value.Trim()
             };
 
@@ -31,8 +31,8 @@ public class Plan
         {
             var step = new CreateFilePlanStep
             {
-                Path = match.Groups[6].Value.Trim(),
-                Reason = match.Groups[8].Value.Trim()
+                Path = match.Groups[1].Value.Trim().TrimStart('/'),
+                Reason = match.Groups[2].Value.Trim()
             };
 
             CreateFileSteps.Add(step);
