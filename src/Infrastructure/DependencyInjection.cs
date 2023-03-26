@@ -10,11 +10,12 @@ public static class DependencyInjection
     {
         services.AddTransient<IWorkItemService, GitHubWorkItemService>();
         services.AddTransient<IDateTimeService, DateTimeService>();
-        services.AddTransient<IFileService, FileService>();
         services.AddTransient<IGitHubClientFactory, GitHubClientFactory>();
         services.AddTransient<IPullRequestService, PullRequestService>();
 
         services.AddOpenAIService();
+
+        services.AddScoped<IFileService, FileService>();
 
         services.AddHostedService<WorkItemPollerService>();
 
