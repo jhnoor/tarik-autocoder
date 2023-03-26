@@ -20,15 +20,15 @@ public static class PlanningPrompts
 
                 ## Plan
 
-                1. <command> <reason>
-                2. <command> <reason>
+                1. <command> | <reason>
+                2. <command> | <reason>
                 ...
-                n. <command> <reason>
+                n. <command> | <reason>
 
             Where <command> is one of the following commands:
-                * Create a new file <filename>
-                * Edit the file <filename>
-                * Delete the file <filename>
+                * "Create a new file <path/to/file>"
+                * "Edit the file <path/to/file>"
+                * "Delete the file <path/to/file>"
 
             And <reason> is the relevant reason for creating, editing or deleting this file according to the plan.
                         
