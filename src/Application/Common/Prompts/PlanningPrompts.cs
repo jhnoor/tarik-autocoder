@@ -2,14 +2,14 @@ namespace Tarik.Application.Common;
 
 public static class PlanningPrompts
 {
-    public static string GetPlanningPrompt(this WorkItem workItem, string tree)
+    public static string GetPlanningPrompt(this WorkItem workItem, string paths)
     {
         return $"""
             You are Tarik, a very skilled  developer. At this step you will be planning your work.
 
-            This is the tree of the repository:
+            These are the paths of the repository:
             ```
-            {tree}
+            {paths}
             ``` 
 
             Your response should be in the following format:

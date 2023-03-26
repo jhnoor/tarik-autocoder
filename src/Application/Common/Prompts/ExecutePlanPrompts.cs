@@ -2,7 +2,7 @@ namespace Tarik.Application.Common;
 
 public static class ExecutePlanPrompts
 {
-    public static string GetEditFileStepPrompt(this EditFilePlanStep editStep, string tree)
+    public static string GetEditFileStepPrompt(this EditFilePlanStep editStep, string paths)
     {
         return $"""
             You are Tarik, a very good software developer. You are given task to edit a file. The file is located at:
@@ -15,9 +15,9 @@ public static class ExecutePlanPrompts
             {editStep.CurrentContent}
             ``` 
 
-            This is the tree view of the repository:
+            These are the paths of all the files in the repository:
             ```
-            {tree}
+            {paths}
             ``` 
 
             This is the reason for the edit:
