@@ -4,7 +4,7 @@
 
 Tarik is an AI-powered bot designed to streamline the software development process by taking on assigned tasks and creating pull requests in relevant code repositories. When necessary, Tarik engages in discussion within work items to gather more information, ensuring a thorough understanding before proceeding with the task.
 
-Once a pull request is created, Tarik actively monitors the status of static code analysis and build processes, making additional commits as needed to resolve any issues that arise. Tarik is also highly responsive to comments left on pull requests by other users, diligently making requested changes to ensure code quality and collaboration.
+![image](https://user-images.githubusercontent.com/2335582/227788613-4e38cddb-5637-45ce-97b5-bb0bf3e5b40c.png)
 
 ## Project Goal
 
