@@ -1,4 +1,3 @@
-```
 # Tarik - TaskToPR
 
 <img src="https://user-images.githubusercontent.com/2335582/226174735-298dfef7-2108-4f50-8509-c1a7fec807ec.png"  width="10%">
@@ -27,5 +26,3 @@ This project utilizes the following technologies:
 ## Documentation
 
 For more information on setting up the environment, please refer to the [env.MD](./docs/env.MD) file in the docs folder.
-
-```
