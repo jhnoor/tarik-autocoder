@@ -1,4 +1,4 @@
-# Contribution Guidelines
+    # Contribution Guidelines
 
 Thank you for your interest in contributing to this project! We appreciate your effort and want to make the process as smooth as possible. Please follow these guidelines to ensure a successful contribution.
 
@@ -20,6 +20,15 @@ Please adhere to the following coding standards:
 - Write clean, readable, and well-documented code.
 - Include comments where necessary to explain complex or non-obvious code.
 - Write unit tests for your changes, if applicable.
+
+## Web Application Guidelines
+
+When contributing to the web application project, please consider the following:
+
+- Ensure that your changes are compatible with the latest web standards and technologies.
+- Test your changes on multiple browsers and devices to ensure cross-browser compatibility.
+- Follow best practices for accessibility and usability.
+- Keep the user experience in mind when designing new features or making changes to existing ones.
 
 ## Pull Requests
 
