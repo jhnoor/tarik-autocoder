@@ -1,3 +1,4 @@
+```
 # Tarik - TaskToPR
 
 <img src="https://user-images.githubusercontent.com/2335582/226174735-298dfef7-2108-4f50-8509-c1a7fec807ec.png"  width="10%">
@@ -26,3 +27,27 @@ This project utilizes the following technologies:
 ## Documentation
 
 For more information on setting up the environment, please refer to the [env.MD](./docs/env.MD) file in the docs folder.
+
+## Running and Building the Web Application
+
+To run the web application, follow these steps:
+
+1. Navigate to the `src/Api` directory.
+2. Open a terminal and run the following command to build the project:
+   ```
+   dotnet build
+   ```
+3. After the build is successful, run the following command to start the web application:
+   ```
+   dotnet run
+   ```
+4. The web application will be accessible at `http://localhost:5000` or `https://localhost:5001`.
+
+To build the entire solution, navigate to the root directory of the repository and run the following command:
+
+```
+dotnet build tarik.sln
+```
+
+This will build all the projects in the solution, including the web application, Application, and Infrastructure projects, as well as the UnitTests and IntegrationTests projects.
+```
