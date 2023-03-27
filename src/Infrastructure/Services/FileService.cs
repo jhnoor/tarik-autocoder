@@ -13,6 +13,7 @@ public class FileService : IFileService
     private readonly IGitHubClient _gitHubClient;
     private readonly string _repoOwner;
     private readonly string _repoName;
+    private readonly string _pat;
     private readonly ILogger<IFileService> _logger;
 
     public FileService(IOptions<AppSettings> appSettings, IGitHubClientFactory gitHubClientFactory, ILogger<IFileService> logger)
@@ -42,6 +43,7 @@ public class FileService : IFileService
 
         _repoOwner = gitHubSettings.Owner;
         _repoName = gitHubSettings.Repo;
+        _pat = gitHubSettings.PAT;
         _gitHubClient = gitHubClientFactory.CreateGitHubClient();
 
         _localDirectory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
@@ -52,12 +54,10 @@ public class FileService : IFileService
 
     private void CloneRepository()
     {
-        var repoUrl = $"https://github.com/{_repoOwner}/{_repoName}.git";
-
         var startInfo = new ProcessStartInfo
         {
             FileName = "git",
-            Arguments = $"clone {repoUrl} {_localDirectory}",
+            Arguments = $"clone https://tarik-tasktopr:{_pat}@github.com/{_repoOwner}/{_repoName}.git {_localDirectory}",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
@@ -79,7 +79,7 @@ public class FileService : IFileService
         }
         else
         {
-            throw new InvalidOperationException($"Failed to clone repository to {_localDirectory} from {repoUrl}");
+            throw new InvalidOperationException($"Failed to clone repository to {_localDirectory}");
         }
     }
 
