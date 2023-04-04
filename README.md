@@ -1,4 +1,4 @@
-# Tarik - TaskToPR
+# Tarik AutoCoder - Task to Code
 
 <img src="https://user-images.githubusercontent.com/2335582/226174735-298dfef7-2108-4f50-8509-c1a7fec807ec.png"  width="10%">
 
