@@ -26,7 +26,7 @@ public static class PlanningPrompts
                 n. <command> | <reason>
 
             Where <command> is one of the following commands:
-                * "Create a new file <path/to/file>"
+                * "Create and populate the file <path/to/file>"
                 * "Edit the file <path/to/file>"
                 * "Delete the file <path/to/file>"
 

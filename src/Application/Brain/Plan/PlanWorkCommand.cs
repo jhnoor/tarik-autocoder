@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using OpenAI.GPT3.Interfaces;
 using OpenAI.GPT3.ObjectModels;
 using OpenAI.GPT3.ObjectModels.RequestModels;
+using Polly;
 using Tarik.Application.Common;
 using IFileService = Tarik.Application.Common.IFileService;
 
@@ -39,9 +40,11 @@ public class PlanWorkCommand : IRequest<Unit>
             _logger.LogDebug($"Planning work for work item {request.WorkItem.Id}");
             string paths = fileService.GetPaths();
             string planningPrompt = request.WorkItem.GetPlanningPrompt(paths);
+            IAsyncPolicy retryPolicy = RetryPolicies.CreateRetryPolicy(2, _logger);
+
             ChatCompletionCreateRequest chatCompletionCreateRequest = new()
             {
-                Model = Models.Gpt4,
+                Model = Models.Gpt_4,
                 MaxTokens = 8000 - planningPrompt.Length,
                 Temperature = 0.2f,
                 N = 1,
@@ -52,7 +55,11 @@ public class PlanWorkCommand : IRequest<Unit>
             };
 
             _logger.LogDebug($"Sending request to OpenAI: {chatCompletionCreateRequest}");
-            var chatResponse = await _openAIService.ChatCompletion.CreateCompletion(chatCompletionCreateRequest, cancellationToken: cancellationToken);
+
+            var chatResponse = await retryPolicy
+                .ExecuteAsync(async () => await _openAIService.ChatCompletion
+                    .CreateCompletion(chatCompletionCreateRequest, cancellationToken: cancellationToken)
+                );
 
             if (!chatResponse.Successful)
             {
