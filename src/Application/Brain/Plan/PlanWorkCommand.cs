@@ -41,7 +41,7 @@ public class PlanWorkCommand : IRequest<Unit>
             string planningPrompt = request.WorkItem.GetPlanningPrompt(paths);
             ChatCompletionCreateRequest chatCompletionCreateRequest = new()
             {
-                Model = Models.Gpt4,
+                Model = Models.Gpt_4,
                 MaxTokens = 8000 - planningPrompt.Length,
                 Temperature = 0.2f,
                 N = 1,

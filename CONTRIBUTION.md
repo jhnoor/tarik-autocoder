@@ -27,7 +27,7 @@ When submitting a pull request, please ensure that:
 
 - Your code compiles and passes all tests.
 - Your commit messages are clear and concise.
-- Your pull request targets the correct branch (usually `main` or `develop`).
+- Your pull request targets the `main` branch.
 - Your pull request includes a description of the changes and any relevant context.
 - You have resolved any merge conflicts.
 

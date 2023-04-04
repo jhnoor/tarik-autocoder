@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using OpenAI.GPT3.Interfaces;
 using OpenAI.GPT3.ObjectModels;
 using OpenAI.GPT3.ObjectModels.RequestModels;
+using Polly;
 using Tarik.Application.Common;
 using IFileService = Tarik.Application.Common.IFileService;
 
@@ -42,29 +43,37 @@ public class ExecutePlanCommand : IRequest<Unit>
             IFileService fileService = request.Scope.ServiceProvider.GetRequiredService<IFileService>();
             _logger.LogDebug($"Implementing work item {request.WorkItem.Id} - Executing plan");
             var branchName = $"tarik/{request.WorkItem.Id}-{request.WorkItem.Title.ToLower().Replace(' ', '-')}";
+            var retryPolicy = RetryPolicies.CreateRetryPolicy(2, _logger);
 
             try
             {
                 var sourceBranch = await fileService.CreateBranch(branchName, cancellationToken);
+                var paths = fileService.GetPaths();
 
                 foreach (var createFileStep in request.Plan.CreateFileSteps)
                 {
                     if (createFileStep.Path == null)
                         throw new ArgumentException("Path is required for CreateFilePlanStep");
 
-                    await fileService.CreateFile(createFileStep.Path, "<NOTHING>", sourceBranch, cancellationToken);
+                    var context = new Context { ["RetryCount"] = 0 };
+                    createFileStep.AISuggestedContent = await retryPolicy
+                        .ExecuteAsync(async (ctx) => await GenerateContent(createFileStep, request.Plan.StepByStepDiscussion, paths, (int)ctx["RetryCount"], cancellationToken), new Context { ["RetryCount"] = 0 });
+
+                    await fileService.CreateFile(createFileStep, sourceBranch, cancellationToken);
                 }
 
-                var paths = fileService.GetPaths();
                 foreach (var editFileStep in request.Plan.EditFileSteps)
                 {
                     if (editFileStep.Path == null)
                         throw new ArgumentException("Path is required for EditFilePlanStep");
 
                     editFileStep.CurrentContent = await fileService.GetFileContent(editFileStep.Path, sourceBranch, cancellationToken);
-                    editFileStep.AISuggestedContent = await GenerateContent(editFileStep, paths, cancellationToken);
 
-                    await fileService.EditFile(editFileStep.Path, editFileStep.AISuggestedContent, sourceBranch, cancellationToken);
+                    var context = new Context { ["RetryCount"] = 0 };
+                    editFileStep.AISuggestedContent = await retryPolicy
+                        .ExecuteAsync(async (ctx) => await GenerateContent(editFileStep, request.Plan.StepByStepDiscussion, paths, (int)ctx["RetryCount"], cancellationToken), context);
+
+                    await fileService.EditFile(editFileStep, sourceBranch, cancellationToken);
                 }
 
                 await _pullRequestService.CreatePullRequest(request.WorkItem, sourceBranch.Ref, cancellationToken);
@@ -82,21 +91,35 @@ public class ExecutePlanCommand : IRequest<Unit>
             return Unit.Value;
         }
 
-        private async Task<string> GenerateContent(EditFilePlanStep editStep, string paths, CancellationToken cancellationToken)
+        private async Task<string> GenerateContent(MutateFilePlanStep mutateStep, string stepByStepDiscussion, string paths, int retryAttempt, CancellationToken cancellationToken)
         {
-            var prompt = editStep.GetEditFileStepPrompt(paths);
+            var prompt = mutateStep switch
+            {
+                CreateFilePlanStep createStep => createStep.GetCreateFileStepPrompt(stepByStepDiscussion, paths),
+                EditFilePlanStep editStep => editStep.GetEditFileStepPrompt(stepByStepDiscussion, paths),
+                _ => throw new ArgumentException($"Only generate content for {nameof(CreateFilePlanStep)} and {nameof(EditFilePlanStep)}")
+            };
 
             ChatCompletionCreateRequest chatCompletionCreateRequest = new()
             {
-                Model = Models.Gpt4,
-                MaxTokens = 8000 - prompt.Length,
                 Temperature = 0.2f,
                 N = 1,
                 Messages = new List<ChatMessage>
-                    {
-                        ChatMessage.FromSystem(prompt),
-                    }
+                {
+                    ChatMessage.FromSystem(prompt),
+                }
             };
+
+            if (retryAttempt > 1)
+            {
+                chatCompletionCreateRequest.Model = Models.ChatGpt3_5Turbo;
+                chatCompletionCreateRequest.MaxTokens = 4000 - prompt.Length;
+            }
+            else
+            {
+                chatCompletionCreateRequest.Model = Models.Gpt_4;
+                chatCompletionCreateRequest.MaxTokens = 8000 - prompt.Length;
+            }
 
             _logger.LogDebug($"Sending file generation request to OpenAI: {chatCompletionCreateRequest}");
             var chatResponse = await _openAIService.ChatCompletion.CreateCompletion(chatCompletionCreateRequest, cancellationToken: cancellationToken);
