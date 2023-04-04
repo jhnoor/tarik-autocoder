@@ -83,12 +83,12 @@ public class FileService : IFileService
         }
     }
 
-    public async Task CreateFile(string path, string content, Reference branch, CancellationToken cancellationToken)
+    public async Task CreateFile(CreateFilePlanStep createFileStep, Reference branch, CancellationToken cancellationToken)
     {
-        var createFileRequest = new CreateFileRequest($"Create {path}", content, branch.Ref, true);
+        var createFileRequest = new CreateFileRequest($"Create {createFileStep.Path}", createFileStep.AISuggestedContent, branch.Ref, true);
         try
         {
-            await _gitHubClient.Repository.Content.CreateFile(_repoOwner, _repoName, path, createFileRequest);
+            await _gitHubClient.Repository.Content.CreateFile(_repoOwner, _repoName, createFileStep.Path, createFileRequest);
         }
         catch (Octokit.ApiValidationException e)
         {
@@ -104,7 +104,7 @@ public class FileService : IFileService
         }
     }
 
-    public Task DeleteFile(string path, Reference branch, CancellationToken cancellationToken)
+    public Task DeleteFile(DeleteFilePlanStep deleteFileStep, Reference branch, CancellationToken cancellationToken)
     {
         throw new NotImplementedException();
     }
@@ -120,11 +120,11 @@ public class FileService : IFileService
         return FileHelper.GetTree(_localDirectory).SerializePaths(_localDirectory);
     }
 
-    public async Task EditFile(string path, string content, Reference branch, CancellationToken cancellationToken)
+    public async Task EditFile(EditFilePlanStep editFileStep, Reference branch, CancellationToken cancellationToken)
     {
-        var existingFileHash = (await _gitHubClient.Repository.Content.GetAllContentsByRef(_repoOwner, _repoName, path, branch.Ref)).Single().Sha;
-        var updateFileRequest = new UpdateFileRequest($"Update {path}", content, existingFileHash, branch.Ref, true);
-        await _gitHubClient.Repository.Content.UpdateFile(_repoOwner, _repoName, path, updateFileRequest);
+        var existingFileHash = (await _gitHubClient.Repository.Content.GetAllContentsByRef(_repoOwner, _repoName, editFileStep.Path, branch.Ref)).Single().Sha;
+        var updateFileRequest = new UpdateFileRequest($"Update {editFileStep.Path}", editFileStep.AISuggestedContent, existingFileHash, branch.Ref, true);
+        await _gitHubClient.Repository.Content.UpdateFile(_repoOwner, _repoName, editFileStep.Path, updateFileRequest);
     }
 
     public async Task<Reference> CreateBranch(string branchName, CancellationToken cancellationToken)

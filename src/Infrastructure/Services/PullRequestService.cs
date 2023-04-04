@@ -20,16 +20,18 @@ public class PullRequestService : IPullRequestService
     public async Task<Application.Common.PullRequest> CreatePullRequest(WorkItem workItem, string sourceBranchRef, CancellationToken cancellationToken)
     {
         var targetBranch = await _gitHubClient.Git.Reference.Get(_repoOwner, _repoName, "heads/main");
-        var existingPr = await _gitHubClient.PullRequest.GetAllForRepository(_repoOwner, _repoName, new PullRequestRequest
+        var pullRequests = await _gitHubClient.PullRequest.GetAllForRepository(_repoOwner, _repoName, new PullRequestRequest
         {
             State = ItemStateFilter.Open,
             Head = sourceBranchRef,
             Base = targetBranch.Ref,
         });
 
-        if (existingPr.Any())
+        var existingPr = pullRequests.SingleOrDefault(x => x.Head.Ref == sourceBranchRef);
+
+        if (existingPr != null)
         {
-            return new Application.Common.PullRequest(existingPr.First());
+            return new Application.Common.PullRequest(existingPr);
         }
 
         var prTitle = $"Implements: {workItem.Title}";
