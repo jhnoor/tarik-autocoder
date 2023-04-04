@@ -27,15 +27,6 @@ Tarik continuously monitors issues on Github that are assigned to him. When an i
 - Create a branch and make changes according to above plan
 - Create a PR with above changes
 
-## Tech Stack
-
-- .NET 7
-
-### API's consumed
-
-- [OpenAI's GPT-4 API](https://platform.openai.com/docs/models/gpt-4)
-- [Github API](https://docs.github.com/en/rest)
-
 ## Getting started
 
 - Install the [.NET 7 SDK](https://dotnet.microsoft.com/download/dotnet/7.0)
@@ -52,4 +43,4 @@ Tarik continuously monitors issues on Github that are assigned to him. When an i
 dotnet run
 ```
 
-## [Contribution](./CONTRIBUTION.md)
+## [Contributing](./CONTRIBUTING.md)

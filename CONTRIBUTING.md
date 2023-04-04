@@ -1,4 +1,4 @@
-# Contribution Guidelines
+# Contributing guide
 
 Thank you for your interest in contributing to this project! We appreciate your effort and want to make the process as smooth as possible. Please follow these guidelines to ensure a successful contribution.
 
@@ -28,6 +28,8 @@ When submitting a pull request, please ensure that:
 - Your code compiles and passes all tests.
 - Your commit messages are clear and concise.
 - Your pull request targets the `main` branch.
+- Your branch must be of the format `<user>/feature/<feature-name>` or `<user>/bugfix/<bugfix-name>`.
+  - e.g. `john/feature/add-logging` or `yahya/bugfix/fix-logging`
 - Your pull request includes a description of the changes and any relevant context.
 - You have resolved any merge conflicts.
 
