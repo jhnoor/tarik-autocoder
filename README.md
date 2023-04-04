@@ -40,7 +40,7 @@ Tarik continuously monitors issues on Github that are assigned to him. When an i
 - Run the project:
 
 ```bash
-dotnet run
+dotnet run --project src/Api
 ```
 
 ## [Contributing](./CONTRIBUTING.md)
