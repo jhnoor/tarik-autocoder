@@ -30,7 +30,7 @@ public class ParsePlanCommand : IRequest<Plan>
 
             try
             {
-                var comments = await _workItemApiClient.GetCommentsAsync(request.WorkItem.Id);
+                var comments = await _workItemApiClient.GetCommentsAsync(request.WorkItem);
 
                 var approvedPlanComment = comments.FirstOrDefault(c => c.IsApprovedPlan);
 
@@ -44,7 +44,7 @@ public class ParsePlanCommand : IRequest<Plan>
             catch (Exception e)
             {
                 _logger.LogError(e, "Failed to parse plan");
-                await _workItemApiClient.Label(request.WorkItem.Id, StateMachineLabel.AutoCodeFailPlanNotParsable, cancellationToken);
+                await _workItemApiClient.Label(request.WorkItem, StateMachineLabel.AutoCodeFailPlanNotParsable, cancellationToken);
                 throw;
             }
         }

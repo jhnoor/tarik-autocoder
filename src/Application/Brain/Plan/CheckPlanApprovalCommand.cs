@@ -32,7 +32,7 @@ public class CheckPlanApprovalCommand : IRequest<Unit>
         {
             _logger.LogDebug($"Checking plan approval for work item {request.WorkItem.Id}");
 
-            var comments = await _workItemApiClient.GetCommentsAsync(request.WorkItem.Id);
+            var comments = await _workItemApiClient.GetCommentsAsync(request.WorkItem);
 
             var approvedPlanComment = comments.FirstOrDefault(c => c.IsLiked && c.IsTarik);
 
@@ -43,8 +43,8 @@ public class CheckPlanApprovalCommand : IRequest<Unit>
             }
 
             _logger.LogDebug($"Found approved plan comment: {approvedPlanComment.Url}");
-            await _workItemApiClient.EditComment(approvedPlanComment.Id, $"{approvedPlanComment.Body}\n\n EDIT: Plan approved! ✅", cancellationToken);
-            await _workItemApiClient.Label(request.WorkItem.Id, StateMachineLabel.AutoCodeAwaitingImplementation, cancellationToken);
+            await _workItemApiClient.EditComment(request.WorkItem, approvedPlanComment.Id, $"{approvedPlanComment.Body}\n\n EDIT: Plan approved! ✅", cancellationToken);
+            await _workItemApiClient.Label(request.WorkItem, StateMachineLabel.AutoCodeAwaitingImplementation, cancellationToken);
             return Unit.Value;
         }
     }
