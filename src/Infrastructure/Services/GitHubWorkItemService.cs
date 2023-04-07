@@ -69,7 +69,7 @@ public class GitHubWorkItemService : IWorkItemService
         };
 
         var currentUser = await _gitHubClient.User.Current();
-        var issues = await _gitHubClient.Issue.GetAllForRepository(_repoOwner, _repoName, request);
+        var issues = await _gitHubClient.Issue.GetAllForOwnedAndMemberRepositories(request);
 
         return issues
             .Where(issue => issue.Assignees.Select(a => a.Id).Contains(currentUser.Id))
