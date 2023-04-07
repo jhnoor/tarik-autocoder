@@ -40,7 +40,7 @@ public class WorkItemPollerService : BackgroundService
             {
                 _logger.LogInformation("Polling for assigned work items...");
 
-                var workItems = await _workItemApiClient.GetOpenWorkItems(cancellationToken);
+                var workItems = await _workItemApiClient.GetIssuesAssignedToTarik(cancellationToken);
 
                 foreach (var workItem in workItems)
                 {

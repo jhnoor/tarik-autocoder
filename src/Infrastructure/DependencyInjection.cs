@@ -12,10 +12,9 @@ public static class DependencyInjection
         services.AddTransient<IDateTimeService, DateTimeService>();
         services.AddTransient<IGitHubClientFactory, GitHubClientFactory>();
         services.AddTransient<IPullRequestService, PullRequestService>();
+        services.AddTransient<IFileServiceFactory, FileServiceFactory>();
 
         services.AddOpenAIService().ConfigureHttpClient(client => client.Timeout = TimeSpan.FromMinutes(3));
-
-        services.AddScoped<IFileService, FileService>();
 
         services.AddHostedService<WorkItemPollerService>();
 

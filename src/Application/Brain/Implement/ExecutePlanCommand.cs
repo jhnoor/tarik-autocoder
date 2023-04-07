@@ -1,5 +1,4 @@
 using MediatR;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OpenAI.GPT3.Interfaces;
 using OpenAI.GPT3.ObjectModels;
@@ -12,16 +11,16 @@ namespace Tarik.Application.Brain;
 
 public class ExecutePlanCommand : IRequest<Unit>
 {
-    public ExecutePlanCommand(WorkItem workItem, Plan plan, IServiceScope scope)
+    public ExecutePlanCommand(WorkItem workItem, Plan plan, IFileService fileService)
     {
         WorkItem = workItem;
         Plan = plan;
-        Scope = scope;
+        FileService = fileService;
     }
 
     public WorkItem WorkItem { get; }
     public Plan Plan { get; }
-    public IServiceScope Scope { get; }
+    public IFileService FileService { get; }
 
     public class ExecutePlanCommandHandler : IRequestHandler<ExecutePlanCommand>
     {
@@ -40,15 +39,14 @@ public class ExecutePlanCommand : IRequest<Unit>
 
         public async Task<Unit> Handle(ExecutePlanCommand request, CancellationToken cancellationToken)
         {
-            IFileService fileService = request.Scope.ServiceProvider.GetRequiredService<IFileService>();
             _logger.LogDebug($"Implementing work item {request.WorkItem.Id} - Executing plan");
             var branchName = $"tarik/{request.WorkItem.Id}-{request.WorkItem.Title.ToLower().Replace(' ', '-')}";
             var retryPolicy = RetryPolicies.CreateRetryPolicy(2, _logger);
 
             try
             {
-                var sourceBranch = await fileService.CreateBranch(branchName, cancellationToken);
-                var paths = fileService.GetPaths();
+                var sourceBranch = await request.FileService.CreateBranch(branchName, cancellationToken);
+                var paths = request.FileService.GetPaths();
 
                 foreach (var createFileStep in request.Plan.CreateFileSteps)
                 {
@@ -59,7 +57,7 @@ public class ExecutePlanCommand : IRequest<Unit>
                     createFileStep.AISuggestedContent = await retryPolicy
                         .ExecuteAsync(async (ctx) => await GenerateContent(createFileStep, request.Plan.StepByStepDiscussion, paths, (int)ctx["RetryCount"], cancellationToken), new Context { ["RetryCount"] = 0 });
 
-                    await fileService.CreateFile(createFileStep, sourceBranch, cancellationToken);
+                    await request.FileService.CreateFile(createFileStep, sourceBranch, cancellationToken);
                 }
 
                 foreach (var editFileStep in request.Plan.EditFileSteps)
@@ -67,13 +65,13 @@ public class ExecutePlanCommand : IRequest<Unit>
                     if (editFileStep.Path == null)
                         throw new ArgumentException("Path is required for EditFilePlanStep");
 
-                    editFileStep.CurrentContent = await fileService.GetFileContent(editFileStep.Path, sourceBranch, cancellationToken);
+                    editFileStep.CurrentContent = await request.FileService.GetFileContent(editFileStep.Path, sourceBranch, cancellationToken);
 
                     var context = new Context { ["RetryCount"] = 0 };
                     editFileStep.AISuggestedContent = await retryPolicy
                         .ExecuteAsync(async (ctx) => await GenerateContent(editFileStep, request.Plan.StepByStepDiscussion, paths, (int)ctx["RetryCount"], cancellationToken), context);
 
-                    await fileService.EditFile(editFileStep, sourceBranch, cancellationToken);
+                    await request.FileService.EditFile(editFileStep, sourceBranch, cancellationToken);
                 }
 
                 await _pullRequestService.CreatePullRequest(request.WorkItem, sourceBranch.Ref, cancellationToken);
@@ -81,12 +79,12 @@ public class ExecutePlanCommand : IRequest<Unit>
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Error executing plan for work item {request.WorkItem.Id}");
-                await _workItemApiClient.Label(request.WorkItem.Id, StateMachineLabel.AutoCodeFailExecution, cancellationToken);
+                await _workItemApiClient.Label(request.WorkItem, StateMachineLabel.AutoCodeFailExecution, cancellationToken);
                 throw;
             }
 
             _logger.LogDebug($"Branch {branchName} created and updated for work item {request.WorkItem.Id}");
-            await _workItemApiClient.Label(request.WorkItem.Id, StateMachineLabel.AutoCodeAwaitingCodeReview, cancellationToken);
+            await _workItemApiClient.Label(request.WorkItem, StateMachineLabel.AutoCodeAwaitingCodeReview, cancellationToken);
 
             return Unit.Value;
         }

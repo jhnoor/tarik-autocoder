@@ -20,13 +20,20 @@ public class WorkCommand : IRequest<Unit>
         private readonly ISender _mediator;
         private readonly IWorkItemService _workItemApiClient;
         private readonly IServiceProvider _serviceProvider;
+        private readonly IFileServiceFactory _fileServiceFactory;
         private readonly ILogger<WorkCommandHandler> _logger;
 
-        public WorkCommandHandler(ISender mediator, IWorkItemService workItemApiClient, IServiceProvider serviceProvider, ILogger<WorkCommandHandler> logger)
+        public WorkCommandHandler(
+            ISender mediator,
+            IWorkItemService workItemApiClient,
+            IServiceProvider serviceProvider,
+            IFileServiceFactory fileServiceFactory,
+            ILogger<WorkCommandHandler> logger)
         {
             _mediator = mediator;
             _workItemApiClient = workItemApiClient;
             _serviceProvider = serviceProvider;
+            _fileServiceFactory = fileServiceFactory;
             _logger = logger;
         }
 
@@ -36,14 +43,16 @@ public class WorkCommand : IRequest<Unit>
 
             using IServiceScope scope = _serviceProvider.CreateScope();
 
+            using IFileService fileService = _fileServiceFactory.CreateFileService(request.WorkItem);
+
             switch (state)
             {
                 case StateMachineLabel.Init:
-                    await _mediator.Send(new PlanWorkCommand(request.WorkItem, scope), cancellationToken);
+                    await _mediator.Send(new PlanWorkCommand(request.WorkItem, fileService), cancellationToken);
                     break;
                 case StateMachineLabel.AutoCodeAwaitingImplementation:
                     Plan plan = await _mediator.Send(new ParsePlanCommand(request.WorkItem), cancellationToken);
-                    await _mediator.Send(new ExecutePlanCommand(request.WorkItem, plan, scope), cancellationToken);
+                    await _mediator.Send(new ExecutePlanCommand(request.WorkItem, plan, fileService), cancellationToken);
                     break;
                 case StateMachineLabel.AutoCodeAwaitingCodeReview:
                     _logger.LogDebug($"Work item #{request.WorkItem.Id} has been implemented - Awaiting code review");

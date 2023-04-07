@@ -1,5 +1,4 @@
 using MediatR;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OpenAI.GPT3.Interfaces;
 using OpenAI.GPT3.ObjectModels;
@@ -12,14 +11,14 @@ namespace Tarik.Application.Brain;
 
 public class PlanWorkCommand : IRequest<Unit>
 {
-    public PlanWorkCommand(WorkItem workItem, IServiceScope scope)
+    public PlanWorkCommand(WorkItem workItem, IFileService fileService)
     {
         WorkItem = workItem;
-        Scope = scope;
+        FileService = fileService;
     }
 
     public WorkItem WorkItem { get; }
-    public IServiceScope Scope { get; }
+    public IFileService FileService { get; }
 
     public class PlanWorkCommandHandler : IRequestHandler<PlanWorkCommand>
     {
@@ -36,9 +35,8 @@ public class PlanWorkCommand : IRequest<Unit>
 
         public async Task<Unit> Handle(PlanWorkCommand request, CancellationToken cancellationToken)
         {
-            IFileService fileService = request.Scope.ServiceProvider.GetRequiredService<IFileService>();
             _logger.LogDebug($"Planning work for work item {request.WorkItem.Id}");
-            string paths = fileService.GetPaths();
+            string paths = request.FileService.GetPaths();
             string planningPrompt = request.WorkItem.GetPlanningPrompt(paths);
             IAsyncPolicy retryPolicy = RetryPolicies.CreateRetryPolicy(2, _logger);
 
@@ -67,8 +65,8 @@ public class PlanWorkCommand : IRequest<Unit>
             }
 
             _logger.LogDebug($"AI response: {chatResponse.Choices.First().Message.Content}");
-            var commentId = await _workItemApiClient.Comment(request.WorkItem.Id, chatResponse.Choices.First().Message.Content, cancellationToken);
-            await _workItemApiClient.Label(request.WorkItem.Id, StateMachineLabel.AutoCodeAwaitingPlanApproval, cancellationToken);
+            var commentId = await _workItemApiClient.Comment(request.WorkItem, chatResponse.Choices.First().Message.Content, cancellationToken);
+            await _workItemApiClient.Label(request.WorkItem, StateMachineLabel.AutoCodeAwaitingPlanApproval, cancellationToken);
 
             return Unit.Value;
         }

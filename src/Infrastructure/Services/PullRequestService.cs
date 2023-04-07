@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Options;
 using Octokit;
 using Tarik.Application.Common;
 
@@ -7,20 +6,15 @@ namespace Tarik.Infrastructure;
 public class PullRequestService : IPullRequestService
 {
     private readonly IGitHubClient _gitHubClient;
-    private readonly string _repoOwner;
-    private readonly string _repoName;
-    public PullRequestService(IOptions<AppSettings> appSettings, IGitHubClientFactory gitHubClientFactory)
+    public PullRequestService(IGitHubClientFactory gitHubClientFactory)
     {
         _gitHubClient = gitHubClientFactory.CreateGitHubClient();
-
-        _repoName = appSettings.Value.GitHub!.Repo!; // TODO code smell
-        _repoOwner = appSettings.Value.GitHub.Owner!; // TODO code smell
     }
 
     public async Task<Application.Common.PullRequest> CreatePullRequest(WorkItem workItem, string sourceBranchRef, CancellationToken cancellationToken)
     {
-        var targetBranch = await _gitHubClient.Git.Reference.Get(_repoOwner, _repoName, "heads/main");
-        var pullRequests = await _gitHubClient.PullRequest.GetAllForRepository(_repoOwner, _repoName, new PullRequestRequest
+        var targetBranch = await _gitHubClient.Git.Reference.Get(workItem.RepositoryOwner, workItem.RepositoryName, "heads/main");
+        var pullRequests = await _gitHubClient.PullRequest.GetAllForRepository(workItem.RepositoryOwner, workItem.RepositoryName, new PullRequestRequest
         {
             State = ItemStateFilter.Open,
             Head = sourceBranchRef,
@@ -39,7 +33,7 @@ public class PullRequestService : IPullRequestService
         {
             Body = $"Implements: #{workItem.Id}",
         };
-        var pr = await _gitHubClient.PullRequest.Create(_repoOwner, _repoName, createPullRequest);
+        var pr = await _gitHubClient.PullRequest.Create(workItem.RepositoryOwner, workItem.RepositoryName, createPullRequest);
         return new Application.Common.PullRequest(pr);
     }
 }

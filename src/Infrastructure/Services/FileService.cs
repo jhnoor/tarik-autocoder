@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.Text;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Octokit;
 using Tarik.Application.Common;
 
@@ -10,54 +9,34 @@ namespace Tarik.Infrastructure;
 public class FileService : IFileService
 {
     private string _localDirectory;
+    private bool _isRepositoryCloned;
     private readonly IGitHubClient _gitHubClient;
-    private readonly string _repoOwner;
-    private readonly string _repoName;
-    private readonly string _pat;
+    private readonly string _gitHubPAT;
+    private readonly WorkItem _workItem;
     private readonly ILogger<IFileService> _logger;
 
-    public FileService(IOptions<AppSettings> appSettings, IGitHubClientFactory gitHubClientFactory, ILogger<IFileService> logger)
+    public FileService(string gitHubPAT, WorkItem workItem, IGitHubClientFactory gitHubClientFactory, ILogger<IFileService> logger)
     {
         _logger = logger;
-        var gitHubSettings = appSettings.Value.GitHub;
-
-        if (gitHubSettings == null)
-        {
-            throw new ArgumentNullException(nameof(gitHubSettings));
-        }
-
-        if (string.IsNullOrWhiteSpace(gitHubSettings.PAT))
-        {
-            throw new ArgumentNullException(nameof(gitHubSettings.PAT));
-        }
-
-        if (string.IsNullOrWhiteSpace(gitHubSettings.Owner))
-        {
-            throw new ArgumentNullException(nameof(gitHubSettings.Owner));
-        }
-
-        if (string.IsNullOrWhiteSpace(gitHubSettings.Repo))
-        {
-            throw new ArgumentNullException(nameof(gitHubSettings.Repo));
-        }
-
-        _repoOwner = gitHubSettings.Owner;
-        _repoName = gitHubSettings.Repo;
-        _pat = gitHubSettings.PAT;
+        _gitHubPAT = gitHubPAT;
+        _workItem = workItem;
         _gitHubClient = gitHubClientFactory.CreateGitHubClient();
-
         _localDirectory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         Directory.CreateDirectory(_localDirectory);
-
-        CloneRepository();
+        CloneRepository(workItem);
     }
 
-    private void CloneRepository()
+    private void CloneRepository(WorkItem workItem)
     {
+        if (_isRepositoryCloned)
+        {
+            return;
+        }
+
         var startInfo = new ProcessStartInfo
         {
             FileName = "git",
-            Arguments = $"clone https://tarik-tasktopr:{_pat}@github.com/{_repoOwner}/{_repoName}.git {_localDirectory}",
+            Arguments = $"clone https://tarik-tasktopr:{_gitHubPAT}@github.com/{workItem.RepositoryOwner}/{workItem.RepositoryName}.git {_localDirectory}",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
@@ -79,8 +58,11 @@ public class FileService : IFileService
         }
         else
         {
-            throw new InvalidOperationException($"Failed to clone repository to {_localDirectory}");
+            var error = process.StandardError.ReadToEnd();
+            throw new InvalidOperationException($"Failed to clone repository to {_localDirectory}, exit code: {process.ExitCode}. Error: {error}");
         }
+
+        _isRepositoryCloned = true;
     }
 
     public async Task CreateFile(CreateFilePlanStep createFileStep, Reference branch, CancellationToken cancellationToken)
@@ -88,7 +70,7 @@ public class FileService : IFileService
         var createFileRequest = new CreateFileRequest($"Create {createFileStep.Path}", createFileStep.AISuggestedContent, branch.Ref, true);
         try
         {
-            await _gitHubClient.Repository.Content.CreateFile(_repoOwner, _repoName, createFileStep.Path, createFileRequest);
+            await _gitHubClient.Repository.Content.CreateFile(_workItem.RepositoryOwner, _workItem.RepositoryName, createFileStep.Path, createFileRequest);
         }
         catch (Octokit.ApiValidationException e)
         {
@@ -111,7 +93,7 @@ public class FileService : IFileService
 
     public async Task<string> GetFileContent(string path, Reference branch, CancellationToken cancellationToken)
     {
-        var bytes = await _gitHubClient.Repository.Content.GetRawContentByRef(_repoOwner, _repoName, path, branch.Ref);
+        var bytes = await _gitHubClient.Repository.Content.GetRawContentByRef(_workItem.RepositoryOwner, _workItem.RepositoryName, path, branch.Ref);
         return Encoding.UTF8.GetString(bytes);
     }
 
@@ -122,23 +104,23 @@ public class FileService : IFileService
 
     public async Task EditFile(EditFilePlanStep editFileStep, Reference branch, CancellationToken cancellationToken)
     {
-        var existingFileHash = (await _gitHubClient.Repository.Content.GetAllContentsByRef(_repoOwner, _repoName, editFileStep.Path, branch.Ref)).Single().Sha;
+        var existingFileHash = (await _gitHubClient.Repository.Content.GetAllContentsByRef(_workItem.RepositoryOwner, _workItem.RepositoryName, editFileStep.Path, branch.Ref)).Single().Sha;
         var updateFileRequest = new UpdateFileRequest($"Update {editFileStep.Path}", editFileStep.AISuggestedContent, existingFileHash, branch.Ref, true);
-        await _gitHubClient.Repository.Content.UpdateFile(_repoOwner, _repoName, editFileStep.Path, updateFileRequest);
+        await _gitHubClient.Repository.Content.UpdateFile(_workItem.RepositoryOwner, _workItem.RepositoryName, editFileStep.Path, updateFileRequest);
     }
 
     public async Task<Reference> CreateBranch(string branchName, CancellationToken cancellationToken)
     {
         try
         {
-            var main = await _gitHubClient.Git.Reference.Get(_repoOwner, _repoName, "heads/main");
-            return await _gitHubClient.Git.Reference.Create(_repoOwner, _repoName, new NewReference($"refs/heads/{branchName}", main.Object.Sha));
+            var main = await _gitHubClient.Git.Reference.Get(_workItem.RepositoryOwner, _workItem.RepositoryName, "heads/main");
+            return await _gitHubClient.Git.Reference.Create(_workItem.RepositoryOwner, _workItem.RepositoryName, new NewReference($"refs/heads/{branchName}", main.Object.Sha));
         }
         catch (Octokit.ApiValidationException e)
         {
             if (e.Message.Contains("Reference already exists"))
             {
-                return await _gitHubClient.Git.Reference.Get(_repoOwner, _repoName, $"refs/heads/{branchName}");
+                return await _gitHubClient.Git.Reference.Get(_workItem.RepositoryOwner, _workItem.RepositoryName, $"refs/heads/{branchName}");
             }
             else
             {
