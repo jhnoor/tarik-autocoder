@@ -8,12 +8,7 @@ public static class FileHelper
     {
         if (depth < 0) return null;
 
-        var node = new DirectoryNode
-        {
-            Path = path,
-            Directories = new List<DirectoryNode>(),
-            Files = new List<string>(Directory.GetFiles(path))
-        };
+        var node = new DirectoryNode(path);
 
         foreach (var directory in Directory.GetDirectories(path))
         {
