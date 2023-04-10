@@ -45,6 +45,7 @@ app.UseOpenApi();
 app.UseSwaggerUi3(opt => opt.Path = "/api");
 
 app.UseRouting();
+app.UsePathBase(Environment.GetEnvironmentVariable("/tarik")); // TODO derive this from env variable
 
 app.UseAuthentication();
 app.UseAuthorization();
