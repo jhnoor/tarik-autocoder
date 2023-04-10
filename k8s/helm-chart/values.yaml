@@ -44,7 +44,6 @@ service:
   port: 80
 
 ingress:
-  host: chart-example.local
   path: /
   pathType: Prefix
   tls: []
