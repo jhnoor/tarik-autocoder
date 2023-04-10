@@ -1,0 +1,66 @@
+replicaCount: 1
+
+image:
+  repository: tariktasktopr01.azurecr.io/tarik
+  pullPolicy: IfNotPresent
+  tag: "<I_WILL_BE_REPLACED_BY_ARGOCD_COMMIT_SHA>"
+
+imagePullSecrets:
+  - name: tariktasktopr01-acr-secret
+
+env:
+  OpenAIServiceOptions__ApiKey: <I_WILL_BE_REPLACED_IN_ARGOCD_PARAM>
+  OpenAIServiceOptions__Organization: <I_WILL_BE_REPLACED_IN_ARGOCD_PARAM>
+  WorkItemPollingIntervalInMinutes: 1
+  GitHubPAT: <I_WILL_BE_REPLACED_IN_ARGOCD_PARAM>
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+
+# podSecurityContext:
+#   fsGroup: 2000
+
+# securityContext:
+#   capabilities:
+#     drop:
+#     - ALL
+#   readOnlyRootFilesystem: true
+#   runAsNonRoot: true
+#   runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  path: /tarik
+  pathType: Prefix
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 5000Mi
+  requests:
+    cpu: 100m
+    memory: 512Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
