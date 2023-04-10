@@ -1,4 +1,3 @@
-
 using FluentValidation.AspNetCore;
 using NSwag;
 using Tarik.Application.Common;
@@ -38,14 +37,19 @@ builder.Services.AddSwaggerDocument(config => config.PostProcess = document =>
 
 var app = builder.Build();
 
+app.UsePathBase("/tarik");
+
 app.UseHealthChecks("/health");
 app.UseStaticFiles();
 
 app.UseOpenApi();
-app.UseSwaggerUi3(opt => opt.Path = "/api");
+app.UseSwaggerUi3(opt =>
+{
+    opt.Path = "/api";
+    opt.TransformToExternalPath = (internalUiRoute, request) => $"/tarik{internalUiRoute}";
+});
 
 app.UseRouting();
-app.UsePathBase(Environment.GetEnvironmentVariable("/tarik")); // TODO derive this from env variable
 
 app.UseAuthentication();
 app.UseAuthorization();
