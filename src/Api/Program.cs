@@ -45,7 +45,7 @@ app.UseStaticFiles();
 app.UseOpenApi();
 app.UseSwaggerUi3(opt =>
 {
-    opt.Path = "/tarik/api";
+    opt.Path = "/api";
     opt.TransformToExternalPath = (internalUiRoute, request) => $"/tarik{internalUiRoute}";
 });
 
