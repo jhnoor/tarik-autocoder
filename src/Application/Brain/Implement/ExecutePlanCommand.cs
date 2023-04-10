@@ -46,7 +46,7 @@ public class ExecutePlanCommand : IRequest<Unit>
             try
             {
                 var sourceBranch = await request.FileService.CreateBranch(branchName, cancellationToken);
-                var paths = request.FileService.GetPaths();
+                string paths = await request.FileService.GetPaths(cancellationToken);
 
                 foreach (var createFileStep in request.Plan.CreateFileSteps)
                 {

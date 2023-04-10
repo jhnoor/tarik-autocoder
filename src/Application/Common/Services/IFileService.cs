@@ -9,5 +9,5 @@ public interface IFileService : IDisposable
     Task DeleteFile(DeleteFilePlanStep deleteFileStep, Reference branch, CancellationToken cancellationToken);
     Task<string> GetFileContent(string path, Reference branch, CancellationToken cancellationToken);
     Task EditFile(EditFilePlanStep editFileStep, Reference branch, CancellationToken cancellationToken);
-    string GetPaths();
+    Task<string> GetPaths(CancellationToken cancellationToken);
 }

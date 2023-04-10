@@ -13,6 +13,7 @@ public class FileService : IFileService
     private readonly IGitHubClient _gitHubClient;
     private readonly string _gitHubPAT;
     private readonly WorkItem _workItem;
+    private readonly SemaphoreSlim _semaphore = new(1, 1);
     private readonly ILogger<IFileService> _logger;
 
     public FileService(string gitHubPAT, WorkItem workItem, IGitHubClientFactory gitHubClientFactory, ILogger<IFileService> logger)
@@ -22,47 +23,74 @@ public class FileService : IFileService
         _workItem = workItem;
         _gitHubClient = gitHubClientFactory.CreateGitHubClient();
         _localDirectory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-        Directory.CreateDirectory(_localDirectory);
-        CloneRepository(workItem);
     }
 
-    private void CloneRepository(WorkItem workItem)
+    private async Task CloneRepository(CancellationToken cancellationToken)
     {
+        await _semaphore.WaitAsync(cancellationToken);
+
         if (_isRepositoryCloned)
         {
+            _semaphore.Release();
             return;
         }
 
-        var startInfo = new ProcessStartInfo
+        try
         {
-            FileName = "git",
-            Arguments = $"clone https://tarik-tasktopr:{_gitHubPAT}@github.com/{workItem.RepositoryOwner}/{workItem.RepositoryName}.git {_localDirectory}",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
+            Directory.CreateDirectory(_localDirectory);
 
-        using Process process = new Process { StartInfo = startInfo };
-        process.OutputDataReceived += (sender, e) => _logger.LogDebug(e.Data);
-        process.ErrorDataReceived += (sender, e) => _logger.LogError(e.Data);
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = "git",
+                Arguments = $"clone https://tarik-tasktopr:{_gitHubPAT}@github.com/{_workItem.RepositoryOwner}/{_workItem.RepositoryName}.git {_localDirectory}",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
 
-        process.Start();
-        process.BeginOutputReadLine();
-        process.BeginErrorReadLine();
-        process.WaitForExit();
+            using Process process = new Process { StartInfo = startInfo };
+            var outputBuilder = new StringBuilder();
+            var errorBuilder = new StringBuilder();
 
-        if (process.ExitCode == 0)
-        {
-            _logger.LogDebug($"Repository cloned successfully to {_localDirectory}");
+            process.OutputDataReceived += (sender, e) =>
+            {
+                if (e.Data != null)
+                {
+                    outputBuilder.AppendLine(e.Data);
+                    _logger.LogDebug(e.Data);
+                }
+            };
+            process.ErrorDataReceived += (sender, e) =>
+            {
+                if (e.Data != null)
+                {
+                    errorBuilder.AppendLine(e.Data);
+                    _logger.LogError(e.Data);
+                }
+            };
+
+            process.Start();
+            process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
+            await process.WaitForExitAsync(cancellationToken);
+
+            if (process.ExitCode == 0)
+            {
+                _logger.LogDebug($"Repository cloned successfully to {_localDirectory}");
+            }
+            else
+            {
+                var error = await process.StandardError.ReadToEndAsync(cancellationToken);
+                throw new InvalidOperationException($"Failed to clone repository to {_localDirectory}, exit code: {process.ExitCode}. Error: {error}");
+            }
+
+            _isRepositoryCloned = true;
         }
-        else
+        finally
         {
-            var error = process.StandardError.ReadToEnd();
-            throw new InvalidOperationException($"Failed to clone repository to {_localDirectory}, exit code: {process.ExitCode}. Error: {error}");
+            _semaphore.Release();
         }
-
-        _isRepositoryCloned = true;
     }
 
     public async Task CreateFile(CreateFilePlanStep createFileStep, Reference branch, CancellationToken cancellationToken)
@@ -97,8 +125,9 @@ public class FileService : IFileService
         return Encoding.UTF8.GetString(bytes);
     }
 
-    public string GetPaths()
+    public async Task<string> GetPaths(CancellationToken cancellationToken)
     {
+        await CloneRepository(cancellationToken);
         return FileHelper.GetTree(_localDirectory).SerializePaths(_localDirectory);
     }
 
