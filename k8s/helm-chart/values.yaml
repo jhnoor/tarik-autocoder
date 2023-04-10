@@ -44,7 +44,7 @@ service:
   port: 80
 
 ingress:
-  path: /
+  path: /tarik
   pathType: Prefix
   tls: []
   #  - secretName: chart-example-tls
