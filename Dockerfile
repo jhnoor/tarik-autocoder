@@ -14,7 +14,8 @@ COPY ["src/Api/Api.csproj", "src/Api/"]
 COPY ["src/Infrastructure/Infrastructure.csproj", "src/Infrastructure/"]
 COPY ["src/Application/Application.csproj", "src/Application/"]
 RUN dotnet restore "src/Api/Api.csproj"
-COPY . .
+# TODO ensure that this is not copying all of the src...
+COPY . . 
 WORKDIR "/src/src/Api"
 RUN dotnet build "Api.csproj" -c Release -o /app/build
 
