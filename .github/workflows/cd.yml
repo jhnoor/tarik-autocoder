@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - jno/feature/helm-chart
   workflow_dispatch:
 
 jobs:

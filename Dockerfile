@@ -10,13 +10,13 @@ RUN apt-get update && \
 # Build and publish the app
 FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build
 WORKDIR /src
-COPY ["src/Api/Api.csproj", "src/Api/"]
-COPY ["src/Infrastructure/Infrastructure.csproj", "src/Infrastructure/"]
-COPY ["src/Application/Application.csproj", "src/Application/"]
-RUN dotnet restore "src/Api/Api.csproj"
-# TODO ensure that this is not copying all of the src...
-COPY . . 
-WORKDIR "/src/src/Api"
+COPY ["src/Api/Api.csproj", "Api/"]
+COPY ["src/Infrastructure/Infrastructure.csproj", "Infrastructure/"]
+COPY ["src/Application/Application.csproj", "Application/"]
+RUN dotnet restore "Api/Api.csproj"
+
+COPY src . 
+WORKDIR "/src/Api"
 RUN dotnet build "Api.csproj" -c Release -o /app/build
 
 FROM build AS publish
