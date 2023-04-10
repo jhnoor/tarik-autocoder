@@ -8,6 +8,12 @@ image:
 imagePullSecrets:
   - name: tariktasktopr01-acr-secret
 
+env:
+  OpenAIServiceOptions__ApiKey: <I_WILL_BE_REPLACED_IN_ARGOCD_PARAM>
+  OpenAIServiceOptions__Organization: <I_WILL_BE_REPLACED_IN_ARGOCD_PARAM>
+  WorkItemPollingIntervalInMinutes: 1
+  GitHubPAT: <I_WILL_BE_REPLACED_IN_ARGOCD_PARAM>
+
 nameOverride: ""
 fullnameOverride: ""
 
