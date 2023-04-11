@@ -23,6 +23,7 @@ public class FileService : IFileService
         _workItem = workItem;
         _gitHubClient = gitHubClientFactory.CreateGitHubClient();
         _localDirectory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        Directory.CreateDirectory(_localDirectory);
     }
 
     private async Task CloneRepository(CancellationToken cancellationToken)
@@ -37,8 +38,6 @@ public class FileService : IFileService
 
         try
         {
-            Directory.CreateDirectory(_localDirectory);
-
             var startInfo = new ProcessStartInfo
             {
                 FileName = "git",
