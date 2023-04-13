@@ -27,6 +27,7 @@ public class FileServiceFactory : IFileServiceFactory
             _gitHubPAT,
             workItem,
             _serviceProvider.GetRequiredService<IGitHubClientFactory>(),
+            _serviceProvider.GetRequiredService<IShellCommandService>(),
             _serviceProvider.GetRequiredService<ILogger<IFileService>>());
     }
 }
