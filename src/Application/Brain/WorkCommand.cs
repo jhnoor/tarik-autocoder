@@ -2,7 +2,6 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using Tarik.Application.Common;
 
-
 namespace Tarik.Application.Brain;
 
 public class WorkCommand : IRequest<Unit>
@@ -42,8 +41,7 @@ public class WorkCommand : IRequest<Unit>
                     await _mediator.Send(new PlanWorkCommand(request.WorkItem, fileService), cancellationToken);
                     break;
                 case StateMachineLabel.AutoCodeAwaitingImplementation:
-                    Plan plan = await _mediator.Send(new ParsePlanCommand(request.WorkItem), cancellationToken);
-                    await _mediator.Send(new ExecutePlanCommand(request.WorkItem, plan, fileService), cancellationToken);
+                    await _mediator.Send(new ExecutePlanCommand(request.WorkItem, fileService), cancellationToken);
                     break;
                 case StateMachineLabel.AutoCodeAwaitingCodeReview:
                     _logger.LogDebug($"Work item #{request.WorkItem.Id} has been implemented - Awaiting code review");

@@ -36,7 +36,7 @@ public class PlanWorkCommand : IRequest<Unit>
         public async Task<Unit> Handle(PlanWorkCommand request, CancellationToken cancellationToken)
         {
             _logger.LogDebug($"Planning work for work item {request.WorkItem.Id}");
-            string paths = await request.FileService.GetPaths(cancellationToken);
+            string paths = request.FileService.GetPaths();
             string planningPrompt = request.WorkItem.GetPlanningPrompt(paths);
             IAsyncPolicy retryPolicy = RetryPolicies.CreateRetryPolicy(2, _logger);
 

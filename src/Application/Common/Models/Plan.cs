@@ -28,22 +28,18 @@ public class Plan
 
         foreach (Match match in editMatches)
         {
-            var step = new EditFilePlanStep
-            {
-                Path = match.Groups[1].Value.Trim().TrimStart('/'),
-                Reason = match.Groups[2].Value.Trim()
-            };
+            var step = new EditFilePlanStep(
+                path: match.Groups[1].Value.Trim().TrimStart('/'),
+                reason: match.Groups[2].Value.Trim());
 
             EditFileSteps.Add(step);
         }
 
         foreach (Match match in createMatches)
         {
-            var step = new CreateFilePlanStep
-            {
-                Path = match.Groups[1].Value.Trim().TrimStart('/'),
-                Reason = match.Groups[2].Value.Trim()
-            };
+            var step = new CreateFilePlanStep(
+                path: match.Groups[1].Value.Trim().TrimStart('/'),
+                reason: match.Groups[2].Value.Trim());
 
             CreateFileSteps.Add(step);
         }

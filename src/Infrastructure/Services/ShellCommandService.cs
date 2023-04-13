@@ -14,7 +14,12 @@ public class ShellCommandService : IShellCommandService
         _logger = logger;
     }
 
-    public async Task ExecuteCommand(string command, string arguments, string workingDirectory, CancellationToken cancellationToken)
+    public Task ExecuteCommand(string command, string arguments, string workingDirectory, CancellationToken cancellationToken)
+    {
+        return ExecuteCommand<object>(command, arguments, workingDirectory, null, cancellationToken: cancellationToken);
+    }
+
+    public async Task<T?> ExecuteCommand<T>(string command, string arguments, string workingDirectory, Func<string, T>? parseOutput, CancellationToken cancellationToken)
     {
         var startInfo = new ProcessStartInfo
         {
@@ -23,43 +28,24 @@ public class ShellCommandService : IShellCommandService
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
-            CreateNoWindow = true
+            CreateNoWindow = true,
+            WorkingDirectory = workingDirectory
         };
 
         using Process process = new Process { StartInfo = startInfo };
-        var outputBuilder = new StringBuilder();
-        var errorBuilder = new StringBuilder();
-
-        process.OutputDataReceived += (sender, e) =>
-        {
-            if (e.Data != null)
-            {
-                outputBuilder.AppendLine(e.Data);
-                _logger.LogDebug(e.Data);
-            }
-        };
-        process.ErrorDataReceived += (sender, e) =>
-        {
-            if (e.Data != null)
-            {
-                errorBuilder.AppendLine(e.Data);
-                _logger.LogError(e.Data);
-            }
-        };
 
         process.Start();
-        process.BeginOutputReadLine();
-        process.BeginErrorReadLine();
         await process.WaitForExitAsync(cancellationToken);
 
         if (process.ExitCode == 0)
         {
-            return;
+            var output = await process.StandardOutput.ReadToEndAsync();
+            return parseOutput != null ? parseOutput(output) : default;
         }
         else
         {
-            var error = await process.StandardError.ReadToEndAsync(cancellationToken);
-            throw new InvalidOperationException($"Command {command} in {workingDirectory} with arguments {arguments} failed, exit code: {process.ExitCode}. Error: {error}");
+            var error = await process.StandardError.ReadToEndAsync();
+            throw new ShellCommandException($"Command {command} with arguments {arguments} failed, exit code: {process.ExitCode}. Error: {error}");
         }
     }
 }

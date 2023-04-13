@@ -11,15 +11,13 @@ namespace Tarik.Application.Brain;
 
 public class ExecutePlanCommand : IRequest<Unit>
 {
-    public ExecutePlanCommand(WorkItem workItem, Plan plan, IFileService fileService)
+    public ExecutePlanCommand(WorkItem workItem, IFileService fileService)
     {
         WorkItem = workItem;
-        Plan = plan;
         FileService = fileService;
     }
 
     public WorkItem WorkItem { get; }
-    public Plan Plan { get; }
     public IFileService FileService { get; }
 
     public class ExecutePlanCommandHandler : IRequestHandler<ExecutePlanCommand>
@@ -40,41 +38,41 @@ public class ExecutePlanCommand : IRequest<Unit>
         public async Task<Unit> Handle(ExecutePlanCommand request, CancellationToken cancellationToken)
         {
             _logger.LogDebug($"Implementing work item {request.WorkItem.Id} - Executing plan");
-            var branchName = $"tarik/{request.WorkItem.Id}-{request.WorkItem.Title.ToLower().Replace(' ', '-')}";
-            var retryPolicy = RetryPolicies.CreateRetryPolicy(2, _logger);
+            IAsyncPolicy retryPolicy = RetryPolicies.CreateRetryPolicy(2, _logger);
+            string branchName = await request.FileService.BranchName(cancellationToken);
+            Plan plan = await ParsePlan(request.WorkItem, cancellationToken);
 
             try
             {
-                var sourceBranch = await request.FileService.CreateBranch(branchName, cancellationToken);
-                string paths = await request.FileService.GetPaths(cancellationToken);
+                string paths = request.FileService.GetPaths();
 
-                foreach (var createFileStep in request.Plan.CreateFileSteps)
+                foreach (var createFileStep in plan.CreateFileSteps)
                 {
                     if (createFileStep.Path == null)
                         throw new ArgumentException("Path is required for CreateFilePlanStep");
 
                     var context = new Context { ["RetryCount"] = 0 };
                     createFileStep.AISuggestedContent = await retryPolicy
-                        .ExecuteAsync(async (ctx) => await GenerateContent(createFileStep, request.Plan.StepByStepDiscussion, paths, (int)ctx["RetryCount"], cancellationToken), new Context { ["RetryCount"] = 0 });
+                        .ExecuteAsync(async (ctx) => await GenerateContent(createFileStep, plan.StepByStepDiscussion, paths, (int)ctx["RetryCount"], cancellationToken), new Context { ["RetryCount"] = 0 });
 
-                    await request.FileService.CreateFile(createFileStep, sourceBranch, cancellationToken);
+                    await request.FileService.CreateFile(createFileStep, cancellationToken);
                 }
 
-                foreach (var editFileStep in request.Plan.EditFileSteps)
+                foreach (var editFileStep in plan.EditFileSteps)
                 {
                     if (editFileStep.Path == null)
                         throw new ArgumentException("Path is required for EditFilePlanStep");
 
-                    editFileStep.CurrentContent = await request.FileService.GetFileContent(editFileStep.Path, sourceBranch, cancellationToken);
+                    editFileStep.CurrentContent = await request.FileService.GetFileContent(editFileStep.Path, cancellationToken);
 
                     var context = new Context { ["RetryCount"] = 0 };
                     editFileStep.AISuggestedContent = await retryPolicy
-                        .ExecuteAsync(async (ctx) => await GenerateContent(editFileStep, request.Plan.StepByStepDiscussion, paths, (int)ctx["RetryCount"], cancellationToken), context);
+                        .ExecuteAsync(async (ctx) => await GenerateContent(editFileStep, plan.StepByStepDiscussion, paths, (int)ctx["RetryCount"], cancellationToken), context);
 
-                    await request.FileService.EditFile(editFileStep, sourceBranch, cancellationToken);
+                    await request.FileService.EditFile(editFileStep, cancellationToken);
                 }
 
-                await _pullRequestService.CreatePullRequest(request.WorkItem, sourceBranch.Ref, cancellationToken);
+                await _pullRequestService.CreatePullRequest(request.WorkItem, branchName, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -130,6 +128,31 @@ public class ExecutePlanCommand : IRequest<Unit>
             var content = chatResponse.Choices.First().Message.Content;
             _logger.LogDebug($"AI response: {content}");
             return content;
+        }
+
+        private async Task<Plan> ParsePlan(WorkItem workItem, CancellationToken cancellationToken)
+        {
+            _logger.LogDebug($"Implementing work item {workItem.Id} - Parsing plan");
+
+            try
+            {
+                var comments = await _workItemApiClient.GetCommentsAsync(workItem);
+
+                var approvedPlanComment = comments.FirstOrDefault(c => c.IsApprovedPlan);
+
+                if (approvedPlanComment == null)
+                {
+                    throw new InvalidOperationException($"Invalid label state for work item {workItem.Id}, no approved plan comment found");
+                }
+
+                return new Plan(approvedPlanComment.Body);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Failed to parse plan");
+                await _workItemApiClient.Label(workItem, StateMachineLabel.AutoCodeFailPlanNotParsable, cancellationToken);
+                throw;
+            }
         }
     }
 }
