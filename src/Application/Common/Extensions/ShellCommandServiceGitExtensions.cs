@@ -1,5 +1,3 @@
-using Octokit;
-
 namespace Tarik.Application.Common;
 
 public static class ShellCommandServiceGitExtensions
@@ -45,9 +43,9 @@ public static class ShellCommandServiceGitExtensions
         return shellCommandService.ExecuteCommand("git", $"commit -m \"{message}\"", workingDirectory, cancellationToken);
     }
 
-    public static Task GitPush(this IShellCommandService shellCommandService, Reference branch, string workingDirectory, CancellationToken cancellationToken)
+    public static Task GitPush(this IShellCommandService shellCommandService, string branchName, string workingDirectory, CancellationToken cancellationToken)
     {
-        return shellCommandService.ExecuteCommand("git", $"push origin {branch.Ref}", workingDirectory, cancellationToken);
+        return shellCommandService.ExecuteCommand("git", $"push origin {branchName}", workingDirectory, cancellationToken);
     }
 
     public static async Task GitConfig(this IShellCommandService shellCommandService, string name, string email, string workingDirectory, CancellationToken cancellationToken)

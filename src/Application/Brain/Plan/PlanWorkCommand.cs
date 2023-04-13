@@ -11,32 +11,37 @@ namespace Tarik.Application.Brain;
 
 public class PlanWorkCommand : IRequest<Unit>
 {
-    public PlanWorkCommand(WorkItem workItem, IFileService fileService)
+    public PlanWorkCommand(WorkItem workItem)
     {
         WorkItem = workItem;
-        FileService = fileService;
     }
 
     public WorkItem WorkItem { get; }
-    public IFileService FileService { get; }
 
     public class PlanWorkCommandHandler : IRequestHandler<PlanWorkCommand>
     {
         private readonly IOpenAIService _openAIService;
         private readonly IWorkItemService _workItemApiClient;
+        private readonly IFileServiceFactory _fileServiceFactory;
         private readonly ILogger<PlanWorkCommandHandler> _logger;
 
-        public PlanWorkCommandHandler(IOpenAIService openAIService, IWorkItemService workItemApiClient, ILogger<PlanWorkCommandHandler> logger)
+        public PlanWorkCommandHandler(
+            IOpenAIService openAIService,
+            IWorkItemService workItemApiClient,
+            IFileServiceFactory fileServiceFactory,
+            ILogger<PlanWorkCommandHandler> logger)
         {
             _openAIService = openAIService;
             _workItemApiClient = workItemApiClient;
+            _fileServiceFactory = fileServiceFactory;
             _logger = logger;
         }
 
         public async Task<Unit> Handle(PlanWorkCommand request, CancellationToken cancellationToken)
         {
             _logger.LogDebug($"Planning work for work item {request.WorkItem.Id}");
-            string paths = request.FileService.GetPaths();
+            IFileService fileService = _fileServiceFactory.CreateFileService(request.WorkItem);
+            string paths = fileService.GetPaths();
             string planningPrompt = request.WorkItem.GetPlanningPrompt(paths);
             IAsyncPolicy retryPolicy = RetryPolicies.CreateRetryPolicy(2, _logger);
 

@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenAI.GPT3.Interfaces;
@@ -11,27 +12,33 @@ namespace Tarik.Application.Brain;
 
 public class ExecutePlanCommand : IRequest<Unit>
 {
-    public ExecutePlanCommand(WorkItem workItem, IFileService fileService)
+    public ExecutePlanCommand(WorkItem workItem)
     {
         WorkItem = workItem;
-        FileService = fileService;
     }
 
     public WorkItem WorkItem { get; }
-    public IFileService FileService { get; }
 
     public class ExecutePlanCommandHandler : IRequestHandler<ExecutePlanCommand>
     {
+        private static Regex removeMarkDownCodeBlockRegex = new Regex(@"^```[\s\S]*?\n|\n```$", RegexOptions.Compiled, TimeSpan.FromSeconds(1));
         private readonly IOpenAIService _openAIService;
         private readonly IWorkItemService _workItemApiClient;
         private readonly IPullRequestService _pullRequestService;
+        private readonly IFileServiceFactory _fileServiceFactory;
         private readonly ILogger<ExecutePlanCommandHandler> _logger;
 
-        public ExecutePlanCommandHandler(IOpenAIService openAIService, IWorkItemService workItemApiClient, IPullRequestService pullRequestService, ILogger<ExecutePlanCommandHandler> logger)
+        public ExecutePlanCommandHandler(
+            IOpenAIService openAIService,
+            IWorkItemService workItemApiClient,
+            IPullRequestService pullRequestService,
+            IFileServiceFactory fileServiceFactory,
+            ILogger<ExecutePlanCommandHandler> logger)
         {
             _openAIService = openAIService;
             _workItemApiClient = workItemApiClient;
             _pullRequestService = pullRequestService;
+            _fileServiceFactory = fileServiceFactory;
             _logger = logger;
         }
 
@@ -39,12 +46,13 @@ public class ExecutePlanCommand : IRequest<Unit>
         {
             _logger.LogDebug($"Implementing work item {request.WorkItem.Id} - Executing plan");
             IAsyncPolicy retryPolicy = RetryPolicies.CreateRetryPolicy(2, _logger);
-            string branchName = await request.FileService.BranchName(cancellationToken);
+            IFileService fileService = _fileServiceFactory.CreateFileService(request.WorkItem);
+            string branchName = await fileService.BranchName(cancellationToken);
             Plan plan = await ParsePlan(request.WorkItem, cancellationToken);
 
             try
             {
-                string paths = request.FileService.GetPaths();
+                string paths = fileService.GetPaths();
 
                 foreach (var createFileStep in plan.CreateFileSteps)
                 {
@@ -55,7 +63,7 @@ public class ExecutePlanCommand : IRequest<Unit>
                     createFileStep.AISuggestedContent = await retryPolicy
                         .ExecuteAsync(async (ctx) => await GenerateContent(createFileStep, plan.StepByStepDiscussion, paths, (int)ctx["RetryCount"], cancellationToken), new Context { ["RetryCount"] = 0 });
 
-                    await request.FileService.CreateFile(createFileStep, cancellationToken);
+                    await fileService.CreateFile(createFileStep, cancellationToken);
                 }
 
                 foreach (var editFileStep in plan.EditFileSteps)
@@ -63,15 +71,16 @@ public class ExecutePlanCommand : IRequest<Unit>
                     if (editFileStep.Path == null)
                         throw new ArgumentException("Path is required for EditFilePlanStep");
 
-                    editFileStep.CurrentContent = await request.FileService.GetFileContent(editFileStep.Path, cancellationToken);
+                    editFileStep.CurrentContent = await fileService.GetFileContent(editFileStep.Path, cancellationToken);
 
                     var context = new Context { ["RetryCount"] = 0 };
                     editFileStep.AISuggestedContent = await retryPolicy
                         .ExecuteAsync(async (ctx) => await GenerateContent(editFileStep, plan.StepByStepDiscussion, paths, (int)ctx["RetryCount"], cancellationToken), context);
 
-                    await request.FileService.EditFile(editFileStep, cancellationToken);
+                    await fileService.EditFile(editFileStep, cancellationToken);
                 }
 
+                await fileService.Push(cancellationToken);
                 await _pullRequestService.CreatePullRequest(request.WorkItem, branchName, cancellationToken);
             }
             catch (Exception ex)
@@ -125,7 +134,7 @@ public class ExecutePlanCommand : IRequest<Unit>
                 throw new HttpRequestException($"Failed to plan work: {chatResponse.Error?.Message}");
             }
 
-            var content = chatResponse.Choices.First().Message.Content;
+            string content = removeMarkDownCodeBlockRegex.Replace(chatResponse.Choices.First().Message.Content, string.Empty);
             _logger.LogDebug($"AI response: {content}");
             return content;
         }

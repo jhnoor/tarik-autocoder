@@ -8,4 +8,5 @@ public interface IFileService : IDisposable
     Task EditFile(EditFilePlanStep editFileStep, CancellationToken cancellationToken);
     Task<string> BranchName(CancellationToken cancellationToken);
     string GetPaths();
+    Task Push(CancellationToken cancellationToken);
 }

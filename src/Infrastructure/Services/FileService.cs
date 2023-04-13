@@ -87,4 +87,10 @@ public class FileService : IFileService
             }
         }
     }
+
+    public async Task Push(CancellationToken cancellationToken)
+    {
+        var branchName = await BranchName(cancellationToken);
+        await _shellCommandService.GitPush(branchName, _localDirectory, cancellationToken);
+    }
 }
