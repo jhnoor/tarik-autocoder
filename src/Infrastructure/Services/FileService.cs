@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using Octokit;
@@ -13,14 +12,15 @@ public class FileService : IFileService
     private readonly IGitHubClient _gitHubClient;
     private readonly string _gitHubPAT;
     private readonly WorkItem _workItem;
-    private readonly SemaphoreSlim _semaphore = new(1, 1);
+    private readonly IShellCommandService _shellCommandService;
     private readonly ILogger<IFileService> _logger;
 
-    public FileService(string gitHubPAT, WorkItem workItem, IGitHubClientFactory gitHubClientFactory, ILogger<IFileService> logger)
+    public FileService(string gitHubPAT, WorkItem workItem, IGitHubClientFactory gitHubClientFactory, IShellCommandService shellCommandService, ILogger<IFileService> logger)
     {
         _logger = logger;
         _gitHubPAT = gitHubPAT;
         _workItem = workItem;
+        _shellCommandService = shellCommandService;
         _gitHubClient = gitHubClientFactory.CreateGitHubClient();
         _localDirectory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         Directory.CreateDirectory(_localDirectory);
@@ -28,68 +28,18 @@ public class FileService : IFileService
 
     private async Task CloneRepository(CancellationToken cancellationToken)
     {
-        await _semaphore.WaitAsync(cancellationToken);
-
         if (_isRepositoryCloned)
         {
-            _semaphore.Release();
             return;
         }
 
-        try
-        {
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = "git",
-                Arguments = $"clone https://tarik-tasktopr:{_gitHubPAT}@github.com/{_workItem.RepositoryOwner}/{_workItem.RepositoryName}.git {_localDirectory}",
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
+        await _shellCommandService.ExecuteCommand(
+            "git",
+            $"clone https://tarik-tasktopr:{_gitHubPAT}@github.com/{_workItem.RepositoryOwner}/{_workItem.RepositoryName}.git {_localDirectory}",
+            _localDirectory,
+            cancellationToken);
 
-            using Process process = new Process { StartInfo = startInfo };
-            var outputBuilder = new StringBuilder();
-            var errorBuilder = new StringBuilder();
-
-            process.OutputDataReceived += (sender, e) =>
-            {
-                if (e.Data != null)
-                {
-                    outputBuilder.AppendLine(e.Data);
-                    _logger.LogDebug(e.Data);
-                }
-            };
-            process.ErrorDataReceived += (sender, e) =>
-            {
-                if (e.Data != null)
-                {
-                    errorBuilder.AppendLine(e.Data);
-                    _logger.LogError(e.Data);
-                }
-            };
-
-            process.Start();
-            process.BeginOutputReadLine();
-            process.BeginErrorReadLine();
-            await process.WaitForExitAsync(cancellationToken);
-
-            if (process.ExitCode == 0)
-            {
-                _logger.LogDebug($"Repository cloned successfully to {_localDirectory}");
-            }
-            else
-            {
-                var error = await process.StandardError.ReadToEndAsync(cancellationToken);
-                throw new InvalidOperationException($"Failed to clone repository to {_localDirectory}, exit code: {process.ExitCode}. Error: {error}");
-            }
-
-            _isRepositoryCloned = true;
-        }
-        finally
-        {
-            _semaphore.Release();
-        }
+        _isRepositoryCloned = true;
     }
 
     public async Task CreateFile(CreateFilePlanStep createFileStep, Reference branch, CancellationToken cancellationToken)
