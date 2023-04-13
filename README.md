@@ -14,13 +14,13 @@ The goal of this project is to enable developers to delegate small tasks to Tari
 - Create a branch and make changes according to above plan when approved
 - Create a PR with above changes
 
-At this point a human can intervene and continue working on the issue - better yet if Tarik's contribution is good enough, simply merge the PR and close the issue.
+At this point a human can intervene and continue working on the issue - better yet if Tarik's contribution is good enough, simply merge the PR and close the issue. Please see [Benchmarking](./docs/BENCHMARKING.md) for current capability.
 
 ## How it works
 
 Tarik continuously monitors issues on Github that are assigned to him. When an issue is assigned to Tarik, he will:
 
-- Read the issue description
+- Read the issue title and description
 - (TBD) Look at the code in the repository and build up a mental model of the codebase
   - (TBD) perhaps using vector embeddings to represent the codebase?
 - (TBD) Use the codebase model to suggest a plan for the issue
@@ -30,7 +30,7 @@ Tarik continuously monitors issues on Github that are assigned to him. When an i
 ## Getting started
 
 - Install the [.NET 7 SDK](https://dotnet.microsoft.com/download/dotnet/7.0)
-- Set the [.env](./docs/env.MD) variables
+- Set the [.env](./docs/ENV.md) variables
 - Initialize the secrets:
 
 ```bash
