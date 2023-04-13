@@ -4,6 +4,9 @@ namespace Tarik.Application.Common;
 
 public class Plan
 {
+    private Regex stepByStepDiscussionPattern = new Regex(@"## Step-by-step discussion\s*(.*)\n", RegexOptions.Compiled, TimeSpan.FromSeconds(1));
+    private Regex editMatchPattern = new Regex(@"\d+\.\s*Edit the file\s*([^|]+)\s\|\s*(.*)\n", RegexOptions.Compiled, TimeSpan.FromSeconds(1));
+    private Regex createMatchPattern = new Regex(@"\d+\.\s*Create and populate the file\s*([^|]+)\s\|\s*(.*)\n", RegexOptions.Compiled, TimeSpan.FromSeconds(1));
     public string StepByStepDiscussion { get; set; }
     public List<CreateFilePlanStep> CreateFileSteps { get; set; } = new();
     public List<EditFilePlanStep> EditFileSteps { get; set; } = new();
@@ -11,13 +14,9 @@ public class Plan
 
     public Plan(string approvedPlan)
     {
-        string stepByStepDiscussionPattern = @"## Step-by-step discussion\s*(.*)\n";
-        string editMatchPattern = @"\d+\.\s*Edit the file\s*([^|]+)\s\|\s*(.*)\n";
-        string createMatchPattern = @"\d+\.\s*Create and populate the file\s*([^|]+)\s\|\s*(.*)\n";
-
-        var stepByStepDiscussionMatches = Regex.Matches(approvedPlan, stepByStepDiscussionPattern, RegexOptions.IgnoreCase | RegexOptions.Multiline, TimeSpan.FromSeconds(1));
-        var editMatches = Regex.Matches(approvedPlan, editMatchPattern, RegexOptions.IgnoreCase | RegexOptions.Multiline, TimeSpan.FromSeconds(1));
-        var createMatches = Regex.Matches(approvedPlan, createMatchPattern, RegexOptions.IgnoreCase | RegexOptions.Multiline, TimeSpan.FromSeconds(1));
+        var stepByStepDiscussionMatches = stepByStepDiscussionPattern.Matches(approvedPlan);
+        var editMatches = editMatchPattern.Matches(approvedPlan);
+        var createMatches = createMatchPattern.Matches(approvedPlan);
 
         if (stepByStepDiscussionMatches.Count == 0)
         {
@@ -28,22 +27,18 @@ public class Plan
 
         foreach (Match match in editMatches)
         {
-            var step = new EditFilePlanStep
-            {
-                Path = match.Groups[1].Value.Trim().TrimStart('/'),
-                Reason = match.Groups[2].Value.Trim()
-            };
+            var step = new EditFilePlanStep(
+                path: match.Groups[1].Value.Trim().TrimStart('/').Trim('`'),
+                reason: match.Groups[2].Value.Trim());
 
             EditFileSteps.Add(step);
         }
 
         foreach (Match match in createMatches)
         {
-            var step = new CreateFilePlanStep
-            {
-                Path = match.Groups[1].Value.Trim().TrimStart('/'),
-                Reason = match.Groups[2].Value.Trim()
-            };
+            var step = new CreateFilePlanStep(
+                path: match.Groups[1].Value.Trim().TrimStart('/').Trim('`'),
+                reason: match.Groups[2].Value.Trim());
 
             CreateFileSteps.Add(step);
         }

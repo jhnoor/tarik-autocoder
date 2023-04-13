@@ -13,6 +13,7 @@ public static class DependencyInjection
         services.AddTransient<IGitHubClientFactory, GitHubClientFactory>();
         services.AddTransient<IPullRequestService, PullRequestService>();
         services.AddTransient<IFileServiceFactory, FileServiceFactory>();
+        services.AddTransient<IShellCommandService, ShellCommandService>();
 
         services.AddOpenAIService().ConfigureHttpClient(client => client.Timeout = TimeSpan.FromMinutes(3));
 
