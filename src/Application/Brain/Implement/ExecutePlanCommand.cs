@@ -6,6 +6,7 @@ using OpenAI.GPT3.ObjectModels;
 using OpenAI.GPT3.ObjectModels.RequestModels;
 using Polly;
 using Tarik.Application.Common;
+using TiktokenSharp;
 using IFileService = Tarik.Application.Common.IFileService;
 
 namespace Tarik.Application.Brain;
@@ -108,6 +109,9 @@ public class ExecutePlanCommand : IRequest<Unit>
                 _ => throw new ArgumentException($"Only generate content for {nameof(CreateFilePlanStep)} and {nameof(EditFilePlanStep)}")
             };
 
+            TikToken tikToken = TikToken.EncodingForModel("gpt-4");
+            int promptTokenLength = tikToken.Encode(prompt).Count;
+
             ChatCompletionCreateRequest chatCompletionCreateRequest = new()
             {
                 Temperature = 0.2f,
@@ -121,12 +125,12 @@ public class ExecutePlanCommand : IRequest<Unit>
             if (retryAttempt > 1)
             {
                 chatCompletionCreateRequest.Model = Models.ChatGpt3_5Turbo;
-                chatCompletionCreateRequest.MaxTokens = 4000 - prompt.Length;
+                chatCompletionCreateRequest.MaxTokens = 4000 - promptTokenLength;
             }
             else
             {
                 chatCompletionCreateRequest.Model = Models.Gpt_4;
-                chatCompletionCreateRequest.MaxTokens = 8000 - prompt.Length;
+                chatCompletionCreateRequest.MaxTokens = 8000 - promptTokenLength;
             }
 
             _logger.LogDebug($"Sending file generation request to OpenAI: {chatCompletionCreateRequest}");
