@@ -13,7 +13,7 @@ public static class ExecutePlanPrompts
             
             You are currently working on part of this task, this part you will edit an existing file. The file is located here:
 
-            - {editStep.Path}
+            - {editStep.PathTo.RelativePath}
 
             This is the current content of the file:
 
@@ -32,7 +32,7 @@ public static class ExecutePlanPrompts
             {editStep.Reason}
             ```
 
-            Given all the information you have, make a very good guess at what the content of the file should look like. Respond with only the content.
+            Respond with only the content of the file, do not format it as a code block.
         """;
     }
 
@@ -47,7 +47,7 @@ public static class ExecutePlanPrompts
 
             You are currently working on part of this task, this part you will write a file. The file is located here:
 
-            - {createStep.Path}
+            - {createStep.PathTo.RelativePath}
 
             For added context, here is your short term memory.
             ```
@@ -60,7 +60,7 @@ public static class ExecutePlanPrompts
             {createStep.Reason}
             ```
 
-            Given all the information you have, make a very good guess at what the content of the file should look like. Respond with only the content.
+            Respond with only the content of the file, do not format it as a code block.
         """;
     }
 }

@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.Extensions.Logging;
 using Octokit;
 using Tarik.Application.Common;
@@ -11,15 +13,23 @@ public class FileService : IFileService
     private readonly string _gitHubPAT;
     private readonly WorkItem _workItem;
     private readonly IShellCommandService _shellCommandService;
+    private readonly IShortTermMemoryService _shortTermMemoryService;
     private readonly ILogger<IFileService> _logger;
     private readonly List<PathTo> _paths = new();
 
-    public FileService(string gitHubPAT, WorkItem workItem, IGitHubClientFactory gitHubClientFactory, IShellCommandService shellCommandService, ILogger<IFileService> logger)
+    public FileService(
+        string gitHubPAT,
+        WorkItem workItem,
+        IGitHubClientFactory gitHubClientFactory,
+        IShellCommandService shellCommandService,
+        IShortTermMemoryService shortTermMemoryService,
+        ILogger<IFileService> logger)
     {
         _logger = logger;
         _gitHubPAT = gitHubPAT;
         _workItem = workItem;
         _shellCommandService = shellCommandService;
+        _shortTermMemoryService = shortTermMemoryService;
         _gitHubClient = gitHubClientFactory.CreateGitHubClient();
         _localDirectory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         Directory.CreateDirectory(_localDirectory);
@@ -39,21 +49,39 @@ public class FileService : IFileService
 
     public async Task CreateFile(CreateFilePlanStep createFileStep, CancellationToken cancellationToken)
     {
-        await File.WriteAllTextAsync(Path.Combine(_localDirectory, createFileStep.Path), createFileStep.AISuggestedContent, cancellationToken);
+        await File.WriteAllTextAsync(createFileStep.PathTo.AbsolutePath, createFileStep.AISuggestedContent, cancellationToken);
         await _shellCommandService.GitAddAll(_localDirectory, cancellationToken);
-        await _shellCommandService.GitCommit($"Create {createFileStep.Path}", _localDirectory, cancellationToken);
+        await _shellCommandService.GitCommit($"Create {createFileStep.PathTo.RelativePath}", _localDirectory, cancellationToken);
+    }
+
+    public async Task EditFile(EditFilePlanStep editFileStep, CancellationToken cancellationToken)
+    {
+        using var md5 = MD5.Create();
+        var oldContent = await File.ReadAllTextAsync(editFileStep.PathTo.AbsolutePath, cancellationToken);
+        var oldContentHash = Convert.ToBase64String(md5.ComputeHash(Encoding.UTF8.GetBytes(oldContent)));
+        var newContentHash = Convert.ToBase64String(md5.ComputeHash(Encoding.UTF8.GetBytes(editFileStep.AISuggestedContent)));
+
+        if (oldContentHash == newContentHash)
+        {
+            _logger.LogInformation($"File {editFileStep.PathTo.RelativePath} has not changed, skipping commit");
+            return;
+        }
+
+        await File.WriteAllTextAsync(editFileStep.PathTo.AbsolutePath, editFileStep.AISuggestedContent, cancellationToken);
+        await _shellCommandService.GitAddAll(_localDirectory, cancellationToken);
+        await _shellCommandService.GitCommit($"Edit {editFileStep.PathTo.RelativePath}", _localDirectory, cancellationToken);
     }
 
     public async Task DeleteFile(DeleteFilePlanStep deleteFileStep, CancellationToken cancellationToken)
     {
-        File.Delete(Path.Combine(_localDirectory, deleteFileStep.Path));
+        File.Delete(deleteFileStep.PathTo.AbsolutePath);
         await _shellCommandService.GitAddAll(_localDirectory, cancellationToken);
-        await _shellCommandService.GitCommit($"Delete {deleteFileStep.Path}", _localDirectory, cancellationToken);
+        await _shellCommandService.GitCommit($"Delete {deleteFileStep.PathTo.RelativePath}", _localDirectory, cancellationToken);
     }
 
-    public async Task<string> GetFileContent(string path, CancellationToken cancellationToken)
+    public async Task<string> GetFileContent(PathTo path, CancellationToken cancellationToken)
     {
-        return await File.ReadAllTextAsync(Path.Combine(_localDirectory, path), cancellationToken);
+        return await File.ReadAllTextAsync(path.AbsolutePath, cancellationToken);
     }
 
     public string GetPathsAsString()
@@ -73,12 +101,6 @@ public class FileService : IFileService
         return _paths;
     }
 
-    public async Task EditFile(EditFilePlanStep editFileStep, CancellationToken cancellationToken)
-    {
-        await File.WriteAllTextAsync(Path.Combine(_localDirectory, editFileStep.Path), editFileStep.AISuggestedContent, cancellationToken);
-        await _shellCommandService.GitAddAll(_localDirectory, cancellationToken);
-        await _shellCommandService.GitCommit($"Edit {editFileStep.Path}", _localDirectory, cancellationToken);
-    }
 
     public async Task<string> BranchName(CancellationToken cancellationToken)
     {
@@ -105,5 +127,10 @@ public class FileService : IFileService
     {
         var branchName = await BranchName(cancellationToken);
         await _shellCommandService.GitPush(branchName, _localDirectory, cancellationToken);
+    }
+
+    public string LocalDirectory()
+    {
+        return _localDirectory;
     }
 }

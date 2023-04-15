@@ -30,7 +30,8 @@ public static class PlanningPrompts
                 * "Edit the file <path/to/file>"
                 * "Delete the file <path/to/file>"
 
-            And <reason> is the relevant reason for creating, editing or deleting this file according to the plan.
+            And <reason> is the relevant reason for creating, editing or deleting this file according to the plan. 
+            Ensure that the order of the steps is sensible.
                         
             Here's the work item you are planning for:
 

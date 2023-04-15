@@ -51,42 +51,39 @@ public class ExecutePlanCommand : IRequest<Unit>
             _logger.LogDebug($"Implementing work item {request.WorkItem.Id} - Executing plan");
             try
             {
-                IAsyncPolicy retryPolicy = RetryPolicies.CreateRetryPolicy(2, _logger);
                 IFileService fileService = _fileServiceFactory.CreateFileService(request.WorkItem);
+                IAsyncPolicy retryPolicy = RetryPolicies.CreateRetryPolicy(2, _logger);
                 string branchName = await fileService.BranchName(cancellationToken);
-                Plan plan = await ParsePlan(request.WorkItem, cancellationToken);
+                string localDirectory = fileService.LocalDirectory();
+                Plan plan = await ParsePlan(request.WorkItem, localDirectory, cancellationToken);
                 string shortTermMemory = _shortTermMemoryService.Dump();
 
                 foreach (var createFileStep in plan.CreateFileSteps)
                 {
-                    if (createFileStep.Path == null)
-                        throw new ArgumentException("Path is required for CreateFilePlanStep");
-
                     var context = new Context { ["RetryCount"] = 0 };
                     createFileStep.AISuggestedContent = await retryPolicy
                         .ExecuteAsync(async (ctx) => await GenerateContent(createFileStep, plan.StepByStepDiscussion, shortTermMemory, (int)ctx["RetryCount"], cancellationToken), new Context { ["RetryCount"] = 0 });
 
                     await fileService.CreateFile(createFileStep, cancellationToken);
+                    await _shortTermMemoryService.Memorize(createFileStep.PathTo, cancellationToken);
                 }
 
                 foreach (var editFileStep in plan.EditFileSteps)
                 {
-                    if (editFileStep.Path == null)
-                        throw new ArgumentException("Path is required for EditFilePlanStep");
-
-                    editFileStep.CurrentContent = await fileService.GetFileContent(editFileStep.Path, cancellationToken);
+                    editFileStep.CurrentContent = await fileService.GetFileContent(editFileStep.PathTo, cancellationToken);
 
                     var context = new Context { ["RetryCount"] = 0 };
                     editFileStep.AISuggestedContent = await retryPolicy
                         .ExecuteAsync(async (ctx) => await GenerateContent(editFileStep, plan.StepByStepDiscussion, shortTermMemory, (int)ctx["RetryCount"], cancellationToken), context);
 
                     await fileService.EditFile(editFileStep, cancellationToken);
+                    await _shortTermMemoryService.Memorize(editFileStep.PathTo, cancellationToken);
                 }
 
                 await fileService.Push(cancellationToken);
                 await _pullRequestService.CreatePullRequest(request.WorkItem, branchName, cancellationToken);
 
-                _logger.LogDebug($"Branch {branchName} created and updated for work item {request.WorkItem.Id}");
+                _logger.LogInformation($"Branch {branchName} created and updated for work item {request.WorkItem.Id}");
                 await _workItemApiClient.Label(request.WorkItem, StateMachineLabel.AutoCodeAwaitingCodeReview, cancellationToken);
 
                 return Unit.Value;
@@ -114,7 +111,7 @@ public class ExecutePlanCommand : IRequest<Unit>
 
             ChatCompletionCreateRequest chatCompletionCreateRequest = new()
             {
-                Temperature = 0.2f,
+                Temperature = 0f,
                 N = 1,
                 Messages = new List<ChatMessage>
                 {
@@ -129,8 +126,8 @@ public class ExecutePlanCommand : IRequest<Unit>
             }
             else
             {
-                chatCompletionCreateRequest.Model = Models.Gpt_4;
-                chatCompletionCreateRequest.MaxTokens = 8000 - promptTokenLength;
+                chatCompletionCreateRequest.Model = Models.Gpt_4; // TODO - change to GPT-4
+                chatCompletionCreateRequest.MaxTokens = 8000 - promptTokenLength; // TODO - change to 8000
             }
 
             _logger.LogDebug($"Sending file generation request to OpenAI: {chatCompletionCreateRequest}");
@@ -146,7 +143,7 @@ public class ExecutePlanCommand : IRequest<Unit>
             return content;
         }
 
-        private async Task<Plan> ParsePlan(WorkItem workItem, CancellationToken cancellationToken)
+        private async Task<Plan> ParsePlan(WorkItem workItem, string localDirectory, CancellationToken cancellationToken)
         {
             _logger.LogDebug($"Implementing work item {workItem.Id} - Parsing plan");
 
@@ -161,7 +158,7 @@ public class ExecutePlanCommand : IRequest<Unit>
                     throw new InvalidOperationException($"Invalid label state for work item {workItem.Id}, no approved plan comment found");
                 }
 
-                return new Plan(approvedPlanComment.Body);
+                return new Plan(approvedPlanComment.Body, localDirectory);
             }
             catch (Exception e)
             {
