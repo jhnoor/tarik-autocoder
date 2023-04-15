@@ -23,17 +23,20 @@ public class PlanWorkCommand : IRequest<Unit>
         private readonly IOpenAIService _openAIService;
         private readonly IWorkItemService _workItemApiClient;
         private readonly IFileServiceFactory _fileServiceFactory;
+        private readonly IShortTermMemoryService _shortTermMemoryService;
         private readonly ILogger<PlanWorkCommandHandler> _logger;
 
         public PlanWorkCommandHandler(
             IOpenAIService openAIService,
             IWorkItemService workItemApiClient,
             IFileServiceFactory fileServiceFactory,
+            IShortTermMemoryService shortTermMemoryService,
             ILogger<PlanWorkCommandHandler> logger)
         {
             _openAIService = openAIService;
             _workItemApiClient = workItemApiClient;
             _fileServiceFactory = fileServiceFactory;
+            _shortTermMemoryService = shortTermMemoryService;
             _logger = logger;
         }
 
@@ -41,8 +44,8 @@ public class PlanWorkCommand : IRequest<Unit>
         {
             _logger.LogDebug($"Planning work for work item {request.WorkItem.Id}");
             IFileService fileService = _fileServiceFactory.CreateFileService(request.WorkItem);
-            string paths = fileService.GetPathsAsString();
-            string planningPrompt = request.WorkItem.GetPlanningPrompt(paths);
+            string shortTermMemory = _shortTermMemoryService.Dump();
+            string planningPrompt = request.WorkItem.GetPlanningPrompt(shortTermMemory);
             IAsyncPolicy retryPolicy = RetryPolicies.CreateRetryPolicy(2, _logger);
 
             ChatCompletionCreateRequest chatCompletionCreateRequest = new()

@@ -26,6 +26,7 @@ public class ExecutePlanCommand : IRequest<Unit>
         private readonly IWorkItemService _workItemApiClient;
         private readonly IPullRequestService _pullRequestService;
         private readonly IFileServiceFactory _fileServiceFactory;
+        private readonly IShortTermMemoryService _shortTermMemoryService;
         private readonly ILogger<ExecutePlanCommandHandler> _logger;
 
         public ExecutePlanCommandHandler(
@@ -33,26 +34,27 @@ public class ExecutePlanCommand : IRequest<Unit>
             IWorkItemService workItemApiClient,
             IPullRequestService pullRequestService,
             IFileServiceFactory fileServiceFactory,
+            IShortTermMemoryService shortTermMemoryService,
             ILogger<ExecutePlanCommandHandler> logger)
         {
             _openAIService = openAIService;
             _workItemApiClient = workItemApiClient;
             _pullRequestService = pullRequestService;
             _fileServiceFactory = fileServiceFactory;
+            _shortTermMemoryService = shortTermMemoryService;
             _logger = logger;
         }
 
         public async Task<Unit> Handle(ExecutePlanCommand request, CancellationToken cancellationToken)
         {
             _logger.LogDebug($"Implementing work item {request.WorkItem.Id} - Executing plan");
-            IAsyncPolicy retryPolicy = RetryPolicies.CreateRetryPolicy(2, _logger);
-            IFileService fileService = _fileServiceFactory.CreateFileService(request.WorkItem);
-            string branchName = await fileService.BranchName(cancellationToken);
-            Plan plan = await ParsePlan(request.WorkItem, cancellationToken);
-
             try
             {
-                string paths = fileService.GetPathsAsString();
+                IAsyncPolicy retryPolicy = RetryPolicies.CreateRetryPolicy(2, _logger);
+                IFileService fileService = _fileServiceFactory.CreateFileService(request.WorkItem);
+                string branchName = await fileService.BranchName(cancellationToken);
+                Plan plan = await ParsePlan(request.WorkItem, cancellationToken);
+                string shortTermMemory = _shortTermMemoryService.Dump();
 
                 foreach (var createFileStep in plan.CreateFileSteps)
                 {
@@ -61,7 +63,7 @@ public class ExecutePlanCommand : IRequest<Unit>
 
                     var context = new Context { ["RetryCount"] = 0 };
                     createFileStep.AISuggestedContent = await retryPolicy
-                        .ExecuteAsync(async (ctx) => await GenerateContent(createFileStep, plan.StepByStepDiscussion, paths, (int)ctx["RetryCount"], cancellationToken), new Context { ["RetryCount"] = 0 });
+                        .ExecuteAsync(async (ctx) => await GenerateContent(createFileStep, plan.StepByStepDiscussion, shortTermMemory, (int)ctx["RetryCount"], cancellationToken), new Context { ["RetryCount"] = 0 });
 
                     await fileService.CreateFile(createFileStep, cancellationToken);
                 }
@@ -75,13 +77,19 @@ public class ExecutePlanCommand : IRequest<Unit>
 
                     var context = new Context { ["RetryCount"] = 0 };
                     editFileStep.AISuggestedContent = await retryPolicy
-                        .ExecuteAsync(async (ctx) => await GenerateContent(editFileStep, plan.StepByStepDiscussion, paths, (int)ctx["RetryCount"], cancellationToken), context);
+                        .ExecuteAsync(async (ctx) => await GenerateContent(editFileStep, plan.StepByStepDiscussion, shortTermMemory, (int)ctx["RetryCount"], cancellationToken), context);
 
                     await fileService.EditFile(editFileStep, cancellationToken);
                 }
 
                 await fileService.Push(cancellationToken);
                 await _pullRequestService.CreatePullRequest(request.WorkItem, branchName, cancellationToken);
+
+                _logger.LogDebug($"Branch {branchName} created and updated for work item {request.WorkItem.Id}");
+                await _workItemApiClient.Label(request.WorkItem, StateMachineLabel.AutoCodeAwaitingCodeReview, cancellationToken);
+
+                return Unit.Value;
+
             }
             catch (Exception ex)
             {
@@ -89,19 +97,14 @@ public class ExecutePlanCommand : IRequest<Unit>
                 await _workItemApiClient.Label(request.WorkItem, StateMachineLabel.AutoCodeFailExecution, cancellationToken);
                 throw;
             }
-
-            _logger.LogDebug($"Branch {branchName} created and updated for work item {request.WorkItem.Id}");
-            await _workItemApiClient.Label(request.WorkItem, StateMachineLabel.AutoCodeAwaitingCodeReview, cancellationToken);
-
-            return Unit.Value;
         }
 
-        private async Task<string> GenerateContent(MutateFilePlanStep mutateStep, string stepByStepDiscussion, string paths, int retryAttempt, CancellationToken cancellationToken)
+        private async Task<string> GenerateContent(MutateFilePlanStep mutateStep, string stepByStepDiscussion, string shortTermMemory, int retryAttempt, CancellationToken cancellationToken)
         {
             var prompt = mutateStep switch
             {
-                CreateFilePlanStep createStep => createStep.GetCreateFileStepPrompt(stepByStepDiscussion, paths),
-                EditFilePlanStep editStep => editStep.GetEditFileStepPrompt(stepByStepDiscussion, paths),
+                CreateFilePlanStep createStep => createStep.GetCreateFileStepPrompt(stepByStepDiscussion, shortTermMemory),
+                EditFilePlanStep editStep => editStep.GetEditFileStepPrompt(stepByStepDiscussion, shortTermMemory),
                 _ => throw new ArgumentException($"Only generate content for {nameof(CreateFilePlanStep)} and {nameof(EditFilePlanStep)}")
             };
 

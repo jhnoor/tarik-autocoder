@@ -2,7 +2,7 @@ namespace Tarik.Application.Common;
 
 public static class ExecutePlanPrompts
 {
-    public static string GetEditFileStepPrompt(this EditFilePlanStep editStep, string stepByStepDiscussion, string paths)
+    public static string GetEditFileStepPrompt(this EditFilePlanStep editStep, string stepByStepDiscussion, string shortTermMemory)
     {
         return $"""
             You are Tarik, a very good software developer. You are working on this task:
@@ -21,9 +21,9 @@ public static class ExecutePlanPrompts
             {editStep.CurrentContent}
             ``` 
 
-            These are the paths of all the files in the repository:
+            For added context, here is your short term memory.
             ```
-            {paths}
+            {shortTermMemory}
             ``` 
 
             This is the reason for the edit:
@@ -36,7 +36,7 @@ public static class ExecutePlanPrompts
         """;
     }
 
-    public static string GetCreateFileStepPrompt(this CreateFilePlanStep createStep, string stepByStepDiscussion, string paths)
+    public static string GetCreateFileStepPrompt(this CreateFilePlanStep createStep, string stepByStepDiscussion, string shortTermMemory)
     {
         return $"""
             You are Tarik, a very good software developer. You are working on this task:
@@ -49,9 +49,9 @@ public static class ExecutePlanPrompts
 
             - {createStep.Path}
 
-            For added context, here are the paths of all the files in the repository:
+            For added context, here is your short term memory.
             ```
-            {paths}
+            {shortTermMemory}
             ``` 
 
             This is the reason you are writing this file for this current step:
