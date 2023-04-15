@@ -33,6 +33,9 @@ public class WorkCommand : IRequest<Unit>
             switch (state)
             {
                 case StateMachineLabel.Init:
+                    await _mediator.Send(new UnderstandRepositoryCommand(request.WorkItem), cancellationToken);
+                    break;
+                case StateMachineLabel.AutoCodePlanning:
                     await _mediator.Send(new PlanWorkCommand(request.WorkItem), cancellationToken);
                     break;
                 case StateMachineLabel.AutoCodeAwaitingImplementation:

@@ -52,7 +52,7 @@ public class ExecutePlanCommand : IRequest<Unit>
 
             try
             {
-                string paths = fileService.GetPaths();
+                string paths = fileService.GetPathsAsString();
 
                 foreach (var createFileStep in plan.CreateFileSteps)
                 {

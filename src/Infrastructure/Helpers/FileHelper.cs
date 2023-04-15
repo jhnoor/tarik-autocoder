@@ -1,5 +1,3 @@
-using System.Text;
-
 namespace Tarik.Infrastructure;
 
 public static class FileHelper
@@ -23,24 +21,24 @@ public static class FileHelper
 
     }
 
-    public static string SerializePaths(this DirectoryNode? node, string omitPath)
+    public static List<string> Flatten(this DirectoryNode? node, string? omitPath = null)
     {
-        if (node == null) return string.Empty;
+        if (node == null) return new List<string>();
 
-        var sb = new StringBuilder();
+        var paths = new List<string>();
 
-        foreach (var file in node.Files)
+        foreach (var fullFilePath in node.Files)
         {
-            var filePath = file.Replace(omitPath, string.Empty);
-            sb.AppendLine(filePath);
+            var filePath = omitPath == null ? fullFilePath : fullFilePath.Replace(omitPath, string.Empty);
+            paths.Add(filePath);
         }
 
         foreach (var directory in node.Directories)
         {
-            sb.AppendLine(directory.SerializePaths(omitPath));
+            paths.AddRange(directory.Flatten(omitPath));
         }
 
-        return sb.ToString();
+        return paths;
     }
 }
 

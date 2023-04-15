@@ -7,6 +7,7 @@ public interface IFileService : IDisposable
     Task<string> GetFileContent(string path, CancellationToken cancellationToken);
     Task EditFile(EditFilePlanStep editFileStep, CancellationToken cancellationToken);
     Task<string> BranchName(CancellationToken cancellationToken);
-    string GetPaths();
+    List<string> GetPaths(bool relativePath = true);
+    string GetPathsAsString();
     Task Push(CancellationToken cancellationToken);
 }

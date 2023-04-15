@@ -55,9 +55,14 @@ public class FileService : IFileService
         return await File.ReadAllTextAsync(Path.Combine(_localDirectory, path), cancellationToken);
     }
 
-    public string GetPaths()
+    public string GetPathsAsString()
     {
-        return FileHelper.GetTree(_localDirectory).SerializePaths(_localDirectory);
+        return GetPaths(relativePath: true).Aggregate((a, b) => $"{a}{Environment.NewLine}{b}");
+    }
+
+    public List<string> GetPaths(bool relativePath = true)
+    {
+        return FileHelper.GetTree(_localDirectory).Flatten(omitPath: relativePath ? _localDirectory : null);
     }
 
     public async Task EditFile(EditFilePlanStep editFileStep, CancellationToken cancellationToken)
