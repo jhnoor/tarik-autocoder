@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace Tarik.Application.Common;
@@ -5,8 +6,8 @@ namespace Tarik.Application.Common;
 public class Plan
 {
     private Regex stepByStepDiscussionPattern = new Regex(@"## Step-by-step discussion\s*(.*)\n", RegexOptions.Compiled, TimeSpan.FromSeconds(1));
-    private Regex editMatchPattern = new Regex(@"\d+\.\s*Edit the file\s*([^|]+)\s\|\s*(.*)\n", RegexOptions.Compiled, TimeSpan.FromSeconds(1));
-    private Regex createMatchPattern = new Regex(@"\d+\.\s*Create and populate the file\s*([^|]+)\s\|\s*(.*)\n", RegexOptions.Compiled, TimeSpan.FromSeconds(1));
+    private Regex editMatchPattern = new Regex(@"Edit the file (.*)\s+\|\s+(.*?)\s+\|\s+(\[.*?\])", RegexOptions.Compiled, TimeSpan.FromSeconds(1));
+    private Regex createMatchPattern = new Regex(@"Create and populate the file (.*)\s+\|\s+(.*?)\s+\|\s+(\[.*?\])", RegexOptions.Compiled, TimeSpan.FromSeconds(1));
     public string StepByStepDiscussion { get; set; }
     public List<CreateFilePlanStep> CreateFileSteps { get; set; } = new();
     public List<EditFilePlanStep> EditFileSteps { get; set; } = new();
@@ -27,20 +28,41 @@ public class Plan
 
         foreach (Match match in editMatches)
         {
+            var path = match.Groups[1].Value.Trim().TrimStart('/').Trim('`', '"', '\"', '\'');
+            var reason = match.Groups[2].Value.Trim();
+            var relevantFiles = match.Groups[3].Value;
+            List<string> relevantFilePaths = new();
+
+            if (!string.IsNullOrEmpty(relevantFiles) || relevantFiles != "[]")
+            {
+                relevantFilePaths = JsonSerializer.Deserialize<List<string>>(relevantFiles) ?? new List<string>();
+            }
+
             var step = new EditFilePlanStep(
-                path: match.Groups[1].Value.Trim().TrimStart('/').Trim('`', '"', '\"', '\''),
-                reason: match.Groups[2].Value.Trim(),
-                localDirectory: localDirectory);
+                path: path,
+                reason: reason,
+                localDirectory: localDirectory,
+                relevantFilePaths: relevantFilePaths);
 
             EditFileSteps.Add(step);
         }
 
         foreach (Match match in createMatches)
         {
+            var path = match.Groups[1].Value.Trim().TrimStart('/').Trim('`', '"', '\"', '\'');
+            var reason = match.Groups[2].Value.Trim();
+            var relevantFiles = match.Groups[3].Value;
+            List<string> relevantFilePaths = new();
+
+            if (!string.IsNullOrEmpty(relevantFiles) || relevantFiles != "[]") // TODO code smell
+            {
+                relevantFilePaths = JsonSerializer.Deserialize<List<string>>(relevantFiles) ?? new List<string>();
+            }
             var step = new CreateFilePlanStep(
-                path: match.Groups[1].Value.Trim().TrimStart('/').Trim('`', '"', '\"', '\''),
-                reason: match.Groups[2].Value.Trim(),
-                localDirectory: localDirectory);
+                path: path,
+                reason: reason,
+                localDirectory: localDirectory,
+                relevantFilePaths: relevantFilePaths);
 
             CreateFileSteps.Add(step);
         }
@@ -50,4 +72,18 @@ public class Plan
             throw new ArgumentException("No valid plan steps found");
         }
     }
+
+    public string Dump() => $@"""
+        ## Step-by-step discussion
+
+        {StepByStepDiscussion}
+
+        ## Create files
+
+        {string.Join("\n", CreateFileSteps.Select(x => x.Dump()))}
+
+        ## Edit files
+
+        {string.Join("\n", EditFileSteps.Select(x => x.Dump()))}
+        """;
 }

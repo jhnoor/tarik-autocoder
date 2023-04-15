@@ -59,7 +59,7 @@ public class FileService : IFileService
         using var md5 = MD5.Create();
         var oldContent = await File.ReadAllTextAsync(editFileStep.PathTo.AbsolutePath, cancellationToken);
         var oldContentHash = Convert.ToBase64String(md5.ComputeHash(Encoding.UTF8.GetBytes(oldContent)));
-        var newContentHash = Convert.ToBase64String(md5.ComputeHash(Encoding.UTF8.GetBytes(editFileStep.AISuggestedContent)));
+        var newContentHash = Convert.ToBase64String(md5.ComputeHash(Encoding.UTF8.GetBytes(editFileStep.AISuggestedContent ?? "<null>")));
 
         if (oldContentHash == newContentHash)
         {

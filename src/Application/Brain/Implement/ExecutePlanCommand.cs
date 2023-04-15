@@ -62,7 +62,7 @@ public class ExecutePlanCommand : IRequest<Unit>
                 {
                     var context = new Context { ["RetryCount"] = 0 };
                     createFileStep.AISuggestedContent = await retryPolicy
-                        .ExecuteAsync(async (ctx) => await GenerateContent(createFileStep, plan.StepByStepDiscussion, shortTermMemory, (int)ctx["RetryCount"], cancellationToken), new Context { ["RetryCount"] = 0 });
+                        .ExecuteAsync(async (ctx) => await GenerateContent(createFileStep, plan, fileService, shortTermMemory, (int)ctx["RetryCount"], cancellationToken), new Context { ["RetryCount"] = 0 });
 
                     await fileService.CreateFile(createFileStep, cancellationToken);
                     await _shortTermMemoryService.Memorize(createFileStep.PathTo, cancellationToken);
@@ -74,7 +74,7 @@ public class ExecutePlanCommand : IRequest<Unit>
 
                     var context = new Context { ["RetryCount"] = 0 };
                     editFileStep.AISuggestedContent = await retryPolicy
-                        .ExecuteAsync(async (ctx) => await GenerateContent(editFileStep, plan.StepByStepDiscussion, shortTermMemory, (int)ctx["RetryCount"], cancellationToken), context);
+                        .ExecuteAsync(async (ctx) => await GenerateContent(editFileStep, plan, fileService, shortTermMemory, (int)ctx["RetryCount"], cancellationToken), context);
 
                     await fileService.EditFile(editFileStep, cancellationToken);
                     await _shortTermMemoryService.Memorize(editFileStep.PathTo, cancellationToken);
@@ -97,12 +97,12 @@ public class ExecutePlanCommand : IRequest<Unit>
             }
         }
 
-        private async Task<string> GenerateContent(MutateFilePlanStep mutateStep, string stepByStepDiscussion, string shortTermMemory, int retryAttempt, CancellationToken cancellationToken)
+        private async Task<string> GenerateContent(MutateFilePlanStep mutateStep, Plan plan, IFileService fileService, string shortTermMemory, int retryAttempt, CancellationToken cancellationToken)
         {
             var prompt = mutateStep switch
             {
-                CreateFilePlanStep createStep => createStep.GetCreateFileStepPrompt(stepByStepDiscussion, shortTermMemory),
-                EditFilePlanStep editStep => editStep.GetEditFileStepPrompt(stepByStepDiscussion, shortTermMemory),
+                CreateFilePlanStep createStep => await createStep.GetCreateFileStepPrompt(plan, fileService, shortTermMemory, cancellationToken),
+                EditFilePlanStep editStep => await editStep.GetEditFileStepPrompt(plan, fileService, shortTermMemory, cancellationToken),
                 _ => throw new ArgumentException($"Only generate content for {nameof(CreateFilePlanStep)} and {nameof(EditFilePlanStep)}")
             };
 
