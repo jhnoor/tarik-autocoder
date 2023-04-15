@@ -1,21 +1,21 @@
-﻿using FluentAssertions;
-using FluentValidation.Results;
-using NUnit.Framework;
+﻿using FluentValidation.Results;
+using Shouldly;
 using Tarik.Application.Common;
+using Xunit;
 
 namespace Tarik.Application.UnitTests.Common.Exceptions;
 
 public class ValidationExceptionTests
 {
-    [Test]
+    [Fact]
     public void DefaultConstructorCreatesAnEmptyErrorDictionary()
     {
         var actual = new ValidationException().Errors;
 
-        actual.Keys.Should().BeEquivalentTo(Array.Empty<string>());
+        actual.Keys.ShouldBeEquivalentTo(Array.Empty<string>());
     }
 
-    [Test]
+    [Fact]
     public void SingleValidationFailureCreatesASingleElementErrorDictionary()
     {
         var failures = new List<ValidationFailure>
@@ -25,11 +25,11 @@ public class ValidationExceptionTests
 
         var actual = new ValidationException(failures).Errors;
 
-        actual.Keys.Should().BeEquivalentTo(new string[] { "Age" });
-        actual["Age"].Should().BeEquivalentTo(new string[] { "must be over 18" });
+        actual.Keys.ShouldBeEquivalentTo(new string[] { "Age" });
+        actual["Age"].ShouldBeEquivalentTo(new string[] { "must be over 18" });
     }
 
-    [Test]
+    [Fact]
     public void MulitpleValidationFailureForMultiplePropertiesCreatesAMultipleElementErrorDictionaryEachWithMultipleValues()
     {
         var failures = new List<ValidationFailure>
@@ -44,15 +44,15 @@ public class ValidationExceptionTests
 
         var actual = new ValidationException(failures).Errors;
 
-        actual.Keys.Should().BeEquivalentTo(new string[] { "Password", "Age" });
+        actual.Keys.ShouldBeEquivalentTo(new string[] { "Password", "Age" });
 
-        actual["Age"].Should().BeEquivalentTo(new string[]
+        actual["Age"].ShouldBeEquivalentTo(new string[]
         {
                 "must be 25 or younger",
                 "must be 18 or older",
         });
 
-        actual["Password"].Should().BeEquivalentTo(new string[]
+        actual["Password"].ShouldBeEquivalentTo(new string[]
         {
                 "must contain lower case letter",
                 "must contain upper case letter",

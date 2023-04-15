@@ -12,25 +12,37 @@ public abstract class PlanStep
 
 public abstract class MutateFilePlanStep : PlanStep
 {
-    protected MutateFilePlanStep(string path, string localDirectory, string reason) : base(path: path, localDirectory: localDirectory)
+    protected MutateFilePlanStep(string path, string localDirectory, string reason, List<string> relevantFilePaths) : base(path: path, localDirectory: localDirectory)
     {
         Reason = reason;
+        RelevantFiles = relevantFilePaths.Select(x => new PathTo(Path.Combine(localDirectory, x.TrimStart('/')), localDirectory)).ToList();
     }
 
     public string Reason { get; }
     public string? AISuggestedContent { get; set; }
+    public List<PathTo> RelevantFiles { get; }
+
+    public string Dump() => $"* `{PathTo.RelativePath}` | {Reason} | [{string.Join(", ", RelevantFiles.Select(x => x.RelativePath))}]";
 }
 
 public class CreateFilePlanStep : MutateFilePlanStep
 {
-    public CreateFilePlanStep(string path, string localDirectory, string reason) : base(path: path, localDirectory: localDirectory, reason: reason)
+    public CreateFilePlanStep(string path, string localDirectory, string reason, List<string> relevantFilePaths) : base(
+        path: path,
+        localDirectory: localDirectory,
+        reason: reason,
+        relevantFilePaths: relevantFilePaths)
     {
     }
 }
 
 public class EditFilePlanStep : MutateFilePlanStep
 {
-    public EditFilePlanStep(string path, string localDirectory, string reason) : base(path: path, localDirectory: localDirectory, reason: reason)
+    public EditFilePlanStep(string path, string localDirectory, string reason, List<string> relevantFilePaths) : base(
+        path: path,
+        localDirectory: localDirectory,
+        reason: reason,
+        relevantFilePaths: relevantFilePaths)
     {
     }
 
