@@ -2,7 +2,7 @@
 
 In order to assess Tarik's progress, we will use a list of increasingly difficult tasks that he must be able to complete.
 
-1. ⏳ [**Create a Hello World web page**](https://github.com/tarik-tasktopr/hello-world/issues/1)
+1. ✅ [**Create a Hello World web page**](https://github.com/tarik-tasktopr/hello-world/issues/1)
 1. Implement a basic calculator app
 1. Create a simple to-do list app
 1. Integrate a third-party API into your application (e.g., weather or maps API)
