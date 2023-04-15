@@ -15,6 +15,8 @@ public static class DependencyInjection
         services.AddTransient<IFileServiceFactory, FileServiceFactory>();
         services.AddTransient<IShellCommandService, ShellCommandService>();
 
+        services.AddSingleton<IShortTermMemoryService, ShortTermMemoryService>();
+
         services.AddOpenAIService().ConfigureHttpClient(client => client.Timeout = TimeSpan.FromMinutes(3));
 
         services.AddHostedService<WorkItemPollerService>();
