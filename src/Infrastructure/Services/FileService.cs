@@ -12,6 +12,7 @@ public class FileService : IFileService
     private readonly WorkItem _workItem;
     private readonly IShellCommandService _shellCommandService;
     private readonly ILogger<IFileService> _logger;
+    private readonly List<PathTo> _paths = new();
 
     public FileService(string gitHubPAT, WorkItem workItem, IGitHubClientFactory gitHubClientFactory, IShellCommandService shellCommandService, ILogger<IFileService> logger)
     {
@@ -57,12 +58,19 @@ public class FileService : IFileService
 
     public string GetPathsAsString()
     {
-        return GetPaths(relativePath: true).Aggregate((a, b) => $"{a}{Environment.NewLine}{b}");
+        return GetPaths()
+            .Select(x => x.RelativePath)
+            .Aggregate((x, y) => $"{x}{Environment.NewLine}{y}");
     }
 
-    public List<string> GetPaths(bool relativePath = true)
+    public List<PathTo> GetPaths()
     {
-        return FileHelper.GetTree(_localDirectory).Flatten(omitPath: relativePath ? _localDirectory : null);
+        if (_paths.Count == 0)
+        {
+            _paths.AddRange(FileHelper.GetTree(_localDirectory).Flatten(_localDirectory));
+        }
+
+        return _paths;
     }
 
     public async Task EditFile(EditFilePlanStep editFileStep, CancellationToken cancellationToken)

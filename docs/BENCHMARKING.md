@@ -8,7 +8,7 @@ In order to assess Tarik's progress, we will use a list of increasingly difficul
 1. Integrate a third-party API into your application (e.g., weather or maps API)
 1. Create a real-time chat application using web sockets
 1. Implement user authentication and authorization in a web application
-1. Analyze an application and make performance and security fixes
+1. Analyze an application and make performance, logging, metrics, tracing, and security fixes
 1. Deploy a web application to a cloud service (e.g., AWS, Azure, or GCP)
 1. Build a full-stack web application with a modern front-end and back-end framework (e.g., React and Node.js)
 1. Develop a mobile application using a cross-platform framework (e.g., React Native or Flutter)

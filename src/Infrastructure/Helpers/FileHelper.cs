@@ -1,12 +1,14 @@
+using Tarik.Application.Common;
+
 namespace Tarik.Infrastructure;
 
 public static class FileHelper
 {
-    public static DirectoryNode? GetTree(string path, int depth = 32)
+    public static DirectoryNode? GetTree(string path, string? localDirectory = null, int depth = 32)
     {
         if (depth < 0) return null;
 
-        var node = new DirectoryNode(path);
+        var node = new DirectoryNode(path, localDirectory ?? path);
 
         foreach (var directory in Directory.GetDirectories(path))
         {
@@ -14,28 +16,21 @@ public static class FileHelper
 
             if (directory.Contains(".git")) continue;
 
-            node.Directories.Add(GetTree(directory, depth - 1)!);
+            node.Directories.Add(GetTree(path: directory, localDirectory: directory, depth - 1)!);
         }
 
         return node;
-
     }
 
-    public static List<string> Flatten(this DirectoryNode? node, string? omitPath = null)
+    public static List<PathTo> Flatten(this DirectoryNode? node, string localDirectory)
     {
-        if (node == null) return new List<string>();
+        if (node == null || node.Files.Count == 0) return new List<PathTo>();
 
-        var paths = new List<string>();
-
-        foreach (var fullFilePath in node.Files)
-        {
-            var filePath = omitPath == null ? fullFilePath : fullFilePath.Replace(omitPath, string.Empty);
-            paths.Add(filePath);
-        }
+        var paths = node.Files;
 
         foreach (var directory in node.Directories)
         {
-            paths.AddRange(directory.Flatten(omitPath));
+            node.Files.AddRange(directory.Flatten(localDirectory));
         }
 
         return paths;

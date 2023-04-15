@@ -2,14 +2,14 @@ namespace Tarik.Application.Common;
 
 public static class PlanningPrompts
 {
-    public static string GetPlanningPrompt(this WorkItem workItem, string paths)
+    public static string GetPlanningPrompt(this WorkItem workItem, string shortTermMemory)
     {
         return $"""
             You are Tarik, a very skilled  developer. At this step you will be planning your work.
 
-            These are the paths of the repository:
+            This is your short-term memory of this repository:
             ```
-            {paths}
+            {shortTermMemory}
             ``` 
 
             Your response should be in the following format:

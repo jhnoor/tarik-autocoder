@@ -50,7 +50,7 @@ public class UnderstandRepositoryCommand : IRequest<Unit>
             _logger.LogDebug($"Understanding repository {request.WorkItem.RepositoryOwner}/{request.WorkItem.RepositoryName} for work item {request.WorkItem.Id}");
             IFileService fileService = _fileServiceFactory.CreateFileService(request.WorkItem);
 
-            List<string> paths = fileService.GetPaths();
+            List<PathTo> paths = fileService.GetPaths();
 
             foreach (var path in paths)
             {
@@ -62,12 +62,12 @@ public class UnderstandRepositoryCommand : IRequest<Unit>
             return Unit.Value;
         }
 
-        private async Task Memorize(string path, CancellationToken cancellationToken)
+        private async Task Memorize(PathTo path, CancellationToken cancellationToken)
         {
             // using md5 get hash of file in path
             using var md5 = MD5.Create();
 
-            string content = await File.ReadAllTextAsync(path);
+            string content = await File.ReadAllTextAsync(path.AbsolutePath, cancellationToken);
             byte[] hash = md5.ComputeHash(Encoding.UTF8.GetBytes(content));
             string hashString = Convert.ToBase64String(hash);
 
@@ -85,10 +85,10 @@ public class UnderstandRepositoryCommand : IRequest<Unit>
             }
         }
 
-        private async Task<string> Summarize(string path, string hashString, string content, CancellationToken cancellationToken)
+        private async Task<string> Summarize(PathTo path, string hashString, string content, CancellationToken cancellationToken)
         {
             TikToken tikToken = TikToken.EncodingForModel("gpt-3.5-turbo");
-            string fileName = Path.GetFileName(path);
+            string fileName = Path.GetFileName(path.AbsolutePath);
             string summarizePrompt = SummarizeFilePrompt.SummarizePrompt(fileName, content);
             var summarizePromptTokens = tikToken.Encode(summarizePrompt);
 
