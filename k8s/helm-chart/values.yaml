@@ -13,6 +13,7 @@ env:
   OpenAIServiceOptions__Organization: <I_WILL_BE_REPLACED_IN_ARGOCD_PARAM>
   WorkItemPollingIntervalInMinutes: 1
   GitHubPAT: <I_WILL_BE_REPLACED_IN_ARGOCD_PARAM>
+  Logging__LogLevel__Default: Debug
 
 nameOverride: ""
 fullnameOverride: ""

@@ -56,7 +56,7 @@ public class ShortTermMemoryService : IShortTermMemoryService
 
         if (Recall(path, fileHash) == null)
         {
-            _logger.LogInformation($"File {path} has changed, summarizing");
+            _logger.LogInformation($"File {path.RelativePath} has changed, summarizing");
             // if hash is not in memory, summarize file
             string summary = await Summarize(path, fileHash, content, cancellationToken);
             // store hash in memory
@@ -64,7 +64,7 @@ public class ShortTermMemoryService : IShortTermMemoryService
         }
         else
         {
-            _logger.LogInformation($"File {path} has not changed, skipping");
+            _logger.LogInformation($"File {path.RelativePath} has not changed, skipping");
         }
     }
 
