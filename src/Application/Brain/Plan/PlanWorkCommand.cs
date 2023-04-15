@@ -5,6 +5,7 @@ using OpenAI.GPT3.ObjectModels;
 using OpenAI.GPT3.ObjectModels.RequestModels;
 using Polly;
 using Tarik.Application.Common;
+using TiktokenSharp;
 using IFileService = Tarik.Application.Common.IFileService;
 
 namespace Tarik.Application.Brain;
@@ -47,11 +48,13 @@ public class PlanWorkCommand : IRequest<Unit>
             string shortTermMemory = _shortTermMemoryService.Dump();
             string planningPrompt = request.WorkItem.GetPlanningPrompt(shortTermMemory);
             IAsyncPolicy retryPolicy = RetryPolicies.CreateRetryPolicy(2, _logger);
+            TikToken tikToken = TikToken.EncodingForModel("gpt-4");
+            int promptTokenLength = tikToken.Encode(planningPrompt).Count;
 
             ChatCompletionCreateRequest chatCompletionCreateRequest = new()
             {
                 Model = Models.Gpt_4,
-                MaxTokens = 8000 - planningPrompt.Length,
+                MaxTokens = 8000 - promptTokenLength,
                 Temperature = 0.2f,
                 N = 1,
                 Messages = new List<ChatMessage>

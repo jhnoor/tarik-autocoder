@@ -12,7 +12,7 @@ public class Plan
     public List<EditFilePlanStep> EditFileSteps { get; set; } = new();
     public List<DeleteFilePlanStep> DeleteFileSteps { get; set; } = new();
 
-    public Plan(string approvedPlan)
+    public Plan(string approvedPlan, string localDirectory)
     {
         var stepByStepDiscussionMatches = stepByStepDiscussionPattern.Matches(approvedPlan);
         var editMatches = editMatchPattern.Matches(approvedPlan);
@@ -28,8 +28,9 @@ public class Plan
         foreach (Match match in editMatches)
         {
             var step = new EditFilePlanStep(
-                path: match.Groups[1].Value.Trim().TrimStart('/').Trim('`'),
-                reason: match.Groups[2].Value.Trim());
+                path: match.Groups[1].Value.Trim().TrimStart('/').Trim('`', '"', '\"', '\''),
+                reason: match.Groups[2].Value.Trim(),
+                localDirectory: localDirectory);
 
             EditFileSteps.Add(step);
         }
@@ -37,8 +38,9 @@ public class Plan
         foreach (Match match in createMatches)
         {
             var step = new CreateFilePlanStep(
-                path: match.Groups[1].Value.Trim().TrimStart('/').Trim('`'),
-                reason: match.Groups[2].Value.Trim());
+                path: match.Groups[1].Value.Trim().TrimStart('/').Trim('`', '"', '\"', '\''),
+                reason: match.Groups[2].Value.Trim(),
+                localDirectory: localDirectory);
 
             CreateFileSteps.Add(step);
         }

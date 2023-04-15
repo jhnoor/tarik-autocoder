@@ -35,7 +35,7 @@ public static class ShellCommandServiceGitExtensions
 
     public static Task GitAddAll(this IShellCommandService shellCommandService, string workingDirectory, CancellationToken cancellationToken)
     {
-        return shellCommandService.ExecuteCommand("git", $"add --all", workingDirectory, cancellationToken);
+        return shellCommandService.ExecuteCommand("git", $"add .", workingDirectory, cancellationToken);
     }
 
     public static Task GitCommit(this IShellCommandService shellCommandService, string message, string workingDirectory, CancellationToken cancellationToken)

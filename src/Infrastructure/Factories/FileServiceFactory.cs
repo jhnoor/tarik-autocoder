@@ -28,6 +28,7 @@ public class FileServiceFactory : IFileServiceFactory
             workItem,
             _serviceProvider.GetRequiredService<IGitHubClientFactory>(),
             _serviceProvider.GetRequiredService<IShellCommandService>(),
+            _serviceProvider.GetRequiredService<IShortTermMemoryService>(),
             _serviceProvider.GetRequiredService<ILogger<IFileService>>());
     }
 }
