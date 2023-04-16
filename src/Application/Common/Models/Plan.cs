@@ -9,14 +9,16 @@ public class Plan
     private Regex editMatchPattern = new Regex(@"Edit the file (.*)\s+\|\s+(.*?)\s+\|\s+(\[.*?\])", RegexOptions.Compiled, TimeSpan.FromSeconds(1));
     private Regex createMatchPattern = new Regex(@"Create and populate the file (.*)\s+\|\s+(.*?)\s+\|\s+(\[.*?\])", RegexOptions.Compiled, TimeSpan.FromSeconds(1));
     public string StepByStepDiscussion { get; set; }
-    public WorkItem WorkItem { get; }
+    public string WorkItemTitle { get; }
+    public string WorkItemBody { get; }
     public List<CreateFilePlanStep> CreateFileSteps { get; set; } = new();
     public List<EditFilePlanStep> EditFileSteps { get; set; } = new();
     public List<DeleteFilePlanStep> DeleteFileSteps { get; set; } = new();
 
-    public Plan(string approvedPlan, WorkItem workItem, string localDirectory)
+    public Plan(string approvedPlan, string workItemTitle, string workItemBody, string localDirectory)
     {
-        WorkItem = workItem;
+        WorkItemTitle = workItemTitle;
+        WorkItemBody = workItemBody;
 
         var stepByStepDiscussionMatches = stepByStepDiscussionPattern.Matches(approvedPlan);
         var editMatches = editMatchPattern.Matches(approvedPlan);
@@ -77,9 +79,9 @@ public class Plan
     }
 
     public string Dump() => $@"""
-        ## {WorkItem.Title}
-        {WorkItem.Body}
-        
+        ## {WorkItemTitle}
+        {WorkItemBody}
+
         ## Step-by-step discussion
 
         {StepByStepDiscussion}

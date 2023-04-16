@@ -16,7 +16,7 @@ public class PlanStepTests
         var fileServiceMock = new Mock<IFileService>();
         fileServiceMock.Setup(x => x.DumpFiles(It.IsAny<List<PathTo>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync("relevant files");
-        var plan = new Plan(ApprovedPlans.CalculatorPlan, "/path/to/local/directory");
+        var plan = new Plan(ApprovedPlans.CalculatorPlan, "Title", "Body", "/path/to/local/directory");
 
         // Act
         var editFileStepPrompt = await plan.EditFileSteps[0].GetEditFileStepPrompt(plan, fileServiceMock.Object, "", CancellationToken.None);
