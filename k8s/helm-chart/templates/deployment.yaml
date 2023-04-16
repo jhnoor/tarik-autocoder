@@ -6,6 +6,7 @@ metadata:
     {{- include "tarik.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: 3
   selector:
     matchLabels:
       {{- include "tarik.selectorLabels" . | nindent 6 }}
