@@ -6,7 +6,7 @@ public abstract class PlanStep
 
     public PlanStep(string path, string localDirectory)
     {
-        PathTo = new PathTo(Path.Combine(localDirectory, path), localDirectory); // TODO code smell
+        PathTo = new PathTo(path, localDirectory, isRelative: true);
     }
 }
 
@@ -15,7 +15,7 @@ public abstract class MutateFilePlanStep : PlanStep
     protected MutateFilePlanStep(string path, string localDirectory, string reason, List<string> relevantFilePaths) : base(path: path, localDirectory: localDirectory)
     {
         Reason = reason;
-        RelevantFiles = relevantFilePaths.Select(x => new PathTo(Path.Combine(localDirectory, x.TrimStart('/')), localDirectory)).ToList();
+        RelevantFiles = relevantFilePaths.Select(x => new PathTo(x, localDirectory, isRelative: true)).ToList();
     }
 
     public string Reason { get; }
