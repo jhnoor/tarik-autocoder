@@ -172,8 +172,8 @@ public class ExecutePlanCommand : IRequest<Unit>
             }
             else
             {
-                chatCompletionCreateRequest.Model = Models.Gpt_4; // TODO - change to GPT-4
-                chatCompletionCreateRequest.MaxTokens = 8000 - promptTokenLength; // TODO - change to 8000
+                chatCompletionCreateRequest.Model = Models.Gpt_4;
+                chatCompletionCreateRequest.MaxTokens = 8000 - promptTokenLength;
             }
 
             _logger.LogDebug($"Sending file generation request to OpenAI: {chatCompletionCreateRequest}");

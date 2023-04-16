@@ -56,18 +56,13 @@ public class Plan
         {
             var path = match.Groups[1].Value.Trim().TrimStart('/').Trim('`', '"', '\"', '\'');
             var reason = match.Groups[2].Value.Trim();
-            var relevantFiles = match.Groups[3].Value;
-            List<string> relevantFilePaths = new();
+            var relevantFiles = match.Groups[3].Value.Deserialize<List<string>>() ?? new List<string>();
 
-            if (!string.IsNullOrEmpty(relevantFiles) || relevantFiles != "[]") // TODO code smell
-            {
-                relevantFilePaths = relevantFiles.Deserialize<List<string>>() ?? new List<string>();
-            }
             var step = new CreateFilePlanStep(
                 path: path,
                 reason: reason,
                 localDirectory: localDirectory,
-                relevantFilePaths: relevantFilePaths);
+                relevantFilePaths: relevantFiles);
 
             CreateFileSteps.Add(step);
         }
