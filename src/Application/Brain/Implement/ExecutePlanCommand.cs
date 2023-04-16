@@ -1,4 +1,4 @@
-using System.Text.RegularExpressions;
+using System.Text.Json;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using OpenAI.GPT3.Interfaces;
@@ -22,13 +22,13 @@ public class ExecutePlanCommand : IRequest<Unit>
 
     public class ExecutePlanCommandHandler : IRequestHandler<ExecutePlanCommand>
     {
-        private static Regex removeMarkDownCodeBlockRegex = new Regex(@"^```[\s\S]*?\n|\n```$", RegexOptions.Compiled, TimeSpan.FromSeconds(1));
         private readonly IOpenAIService _openAIService;
         private readonly IWorkItemService _workItemApiClient;
         private readonly IPullRequestService _pullRequestService;
         private readonly IFileServiceFactory _fileServiceFactory;
         private readonly IShortTermMemoryService _shortTermMemoryService;
         private readonly ILogger<ExecutePlanCommandHandler> _logger;
+        private readonly IAsyncPolicy _retryPolicy;
 
         public ExecutePlanCommandHandler(
             IOpenAIService openAIService,
@@ -44,6 +44,7 @@ public class ExecutePlanCommand : IRequest<Unit>
             _fileServiceFactory = fileServiceFactory;
             _shortTermMemoryService = shortTermMemoryService;
             _logger = logger;
+            _retryPolicy = RetryPolicies.CreateRetryPolicy(2, _logger);
         }
 
         public async Task<Unit> Handle(ExecutePlanCommand request, CancellationToken cancellationToken)
@@ -52,32 +53,47 @@ public class ExecutePlanCommand : IRequest<Unit>
             try
             {
                 IFileService fileService = _fileServiceFactory.CreateFileService(request.WorkItem);
-                IAsyncPolicy retryPolicy = RetryPolicies.CreateRetryPolicy(2, _logger);
                 string branchName = await fileService.BranchName(cancellationToken);
                 string localDirectory = fileService.LocalDirectory();
                 Plan plan = await ParsePlan(request.WorkItem, localDirectory, cancellationToken);
                 string shortTermMemory = _shortTermMemoryService.Dump();
 
-                foreach (var createFileStep in plan.CreateFileSteps)
-                {
-                    var context = new Context { ["RetryCount"] = 0 };
-                    createFileStep.AISuggestedContent = await retryPolicy
-                        .ExecuteAsync(async (ctx) => await GenerateContent(createFileStep, plan, fileService, shortTermMemory, (int)ctx["RetryCount"], cancellationToken), new Context { ["RetryCount"] = 0 });
+                List<MutateFilePlanStep> initialPassMutateSteps = plan.EditFileSteps
+                    .OfType<MutateFilePlanStep>()
+                    .Concat(plan.CreateFileSteps.OfType<MutateFilePlanStep>())
+                    .ToList();
 
-                    await fileService.CreateFile(createFileStep, cancellationToken);
-                    await _shortTermMemoryService.Memorize(createFileStep.PathTo, cancellationToken);
+                Dictionary<PathTo, List<RelevantFile>> mutatedFiles = new();
+
+                // First pass
+                foreach (var mutateStep in initialPassMutateSteps)
+                {
+                    var generation = await Mutate(mutateStep, plan, fileService, shortTermMemory, cancellationToken);
+
+                    if (generation == null)
+                    {
+                        _logger.LogInformation($"No generation for {mutateStep.PathTo.RelativePath}");
+                        continue;
+                    }
+
+                    mutatedFiles.Add(mutateStep.PathTo, generation.RelevantFiles);
                 }
 
-                foreach (var editFileStep in plan.EditFileSteps)
+                var secondPassMutateSteps = mutatedFiles
+                    .SelectMany(mutatedFile =>
+                    {
+                        return mutatedFile.Value
+                            .Select(relevantFile => new EditFilePlanStep(
+                                relevantFile.Path,
+                                localDirectory,
+                                $"Due to change in {mutatedFile.Key.RelativePath}. {relevantFile.Reason}",
+                                new List<string> { relevantFile.Path }));
+                    }).ToList();
+
+                // Second pass
+                foreach (var mutateStep in secondPassMutateSteps)
                 {
-                    editFileStep.CurrentContent = await fileService.GetFileContent(editFileStep.PathTo, cancellationToken);
-
-                    var context = new Context { ["RetryCount"] = 0 };
-                    editFileStep.AISuggestedContent = await retryPolicy
-                        .ExecuteAsync(async (ctx) => await GenerateContent(editFileStep, plan, fileService, shortTermMemory, (int)ctx["RetryCount"], cancellationToken), context);
-
-                    await fileService.EditFile(editFileStep, cancellationToken);
-                    await _shortTermMemoryService.Memorize(editFileStep.PathTo, cancellationToken);
+                    await Mutate(mutateStep, plan, fileService, shortTermMemory, cancellationToken);
                 }
 
                 await fileService.Push(cancellationToken);
@@ -97,7 +113,33 @@ public class ExecutePlanCommand : IRequest<Unit>
             }
         }
 
-        private async Task<string> GenerateContent(MutateFilePlanStep mutateStep, Plan plan, IFileService fileService, string shortTermMemory, int retryAttempt, CancellationToken cancellationToken)
+        private async Task<Generation?> Mutate(MutateFilePlanStep mutateStep, Plan plan, IFileService fileService, string shortTermMemory, CancellationToken cancellationToken)
+        {
+            var context = new Context { ["RetryCount"] = 0 };
+            var generation = await _retryPolicy
+                .ExecuteAsync(async (ctx) => await GenerateContent(mutateStep, plan, fileService, shortTermMemory, (int)ctx["RetryCount"], cancellationToken), new Context { ["RetryCount"] = 0 });
+
+            if (generation.Content == null)
+            {
+                return null;
+            }
+
+            mutateStep.AISuggestedContent = generation.Content;
+
+            if (mutateStep is CreateFilePlanStep createFileStep)
+            {
+                await fileService.CreateFile(createFileStep, cancellationToken);
+            }
+            else if (mutateStep is EditFilePlanStep editFileStep)
+            {
+                await fileService.EditFile(editFileStep, cancellationToken);
+            }
+
+            await _shortTermMemoryService.Memorize(mutateStep.PathTo, cancellationToken);
+            return generation;
+        }
+
+        private async Task<Generation> GenerateContent(MutateFilePlanStep mutateStep, Plan plan, IFileService fileService, string shortTermMemory, int retryAttempt, CancellationToken cancellationToken)
         {
             var prompt = mutateStep switch
             {
@@ -106,8 +148,12 @@ public class ExecutePlanCommand : IRequest<Unit>
                 _ => throw new ArgumentException($"Only generate content for {nameof(CreateFilePlanStep)} and {nameof(EditFilePlanStep)}")
             };
 
+            _logger.LogDebug($"Prompt: {prompt}");
+
             TikToken tikToken = TikToken.EncodingForModel("gpt-4");
             int promptTokenLength = tikToken.Encode(prompt).Count;
+
+            _logger.LogDebug($"Prompt token length: {promptTokenLength} (max 8000)");
 
             ChatCompletionCreateRequest chatCompletionCreateRequest = new()
             {
@@ -137,10 +183,11 @@ public class ExecutePlanCommand : IRequest<Unit>
             {
                 throw new HttpRequestException($"Failed to plan work: {chatResponse.Error?.Message}");
             }
+            var content = chatResponse.Choices.First().Message.Content;
+            Generation generation = content.Deserialize<Generation>() ?? throw new InvalidOperationException("Failed to deserialize OpenAI response");
+            _logger.LogDebug(generation.ToString());
 
-            string content = removeMarkDownCodeBlockRegex.Replace(chatResponse.Choices.First().Message.Content, string.Empty);
-            _logger.LogDebug($"AI response: {content}");
-            return content;
+            return generation;
         }
 
         private async Task<Plan> ParsePlan(WorkItem workItem, string localDirectory, CancellationToken cancellationToken)
@@ -157,6 +204,9 @@ public class ExecutePlanCommand : IRequest<Unit>
                 {
                     throw new InvalidOperationException($"Invalid label state for work item {workItem.Id}, no approved plan comment found");
                 }
+
+                _logger.LogDebug($"Found approved plan for work item {workItem.Id}");
+                _logger.LogDebug(approvedPlanComment.Body);
 
                 return new Plan(approvedPlanComment.Body, localDirectory);
             }

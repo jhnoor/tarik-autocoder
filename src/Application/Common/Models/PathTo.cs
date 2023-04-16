@@ -10,4 +10,10 @@ public class PathTo
         AbsolutePath = absolutePath;
         RelativePath = absolutePath.Replace(localDirectory, string.Empty);
     }
+
+    public PathTo(string relativePath, string localDirectory, bool isRelative)
+    {
+        RelativePath = relativePath;
+        AbsolutePath = Path.Combine(localDirectory, relativePath.TrimStart('/'));
+    }
 }

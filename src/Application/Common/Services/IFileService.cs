@@ -10,5 +10,6 @@ public interface IFileService : IDisposable
     List<PathTo> GetPaths();
     string GetPathsAsString();
     Task Push(CancellationToken cancellationToken);
+    Task<string> DumpFiles(List<PathTo> filePaths, CancellationToken cancellationToken);
     string LocalDirectory();
 }

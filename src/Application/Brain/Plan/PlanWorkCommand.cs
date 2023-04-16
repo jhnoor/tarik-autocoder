@@ -48,8 +48,12 @@ public class PlanWorkCommand : IRequest<Unit>
             string shortTermMemory = _shortTermMemoryService.Dump();
             string planningPrompt = request.WorkItem.GetPlanningPrompt(shortTermMemory);
             IAsyncPolicy retryPolicy = RetryPolicies.CreateRetryPolicy(2, _logger);
+
+            _logger.LogDebug($"Planning prompt: {planningPrompt}");
+
             TikToken tikToken = TikToken.EncodingForModel("gpt-4");
             int promptTokenLength = tikToken.Encode(planningPrompt).Count;
+            _logger.LogDebug($"Planning prompt token length: {promptTokenLength}");
 
             ChatCompletionCreateRequest chatCompletionCreateRequest = new()
             {
@@ -75,7 +79,7 @@ public class PlanWorkCommand : IRequest<Unit>
                 throw new HttpRequestException($"Failed to plan work: {chatResponse.Error?.Message}");
             }
 
-            _logger.LogDebug($"AI response: {chatResponse.Choices.First().Message.Content}");
+            _logger.LogDebug($"OpenAI content: {chatResponse.Choices.First().Message.Content}");
             var commentId = await _workItemApiClient.Comment(request.WorkItem, chatResponse.Choices.First().Message.Content, cancellationToken);
             await _workItemApiClient.Label(request.WorkItem, StateMachineLabel.AutoCodeAwaitingPlanApproval, cancellationToken);
 

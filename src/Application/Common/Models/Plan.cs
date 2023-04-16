@@ -35,7 +35,7 @@ public class Plan
 
             if (!string.IsNullOrEmpty(relevantFiles) || relevantFiles != "[]")
             {
-                relevantFilePaths = JsonSerializer.Deserialize<List<string>>(relevantFiles) ?? new List<string>();
+                relevantFilePaths = relevantFiles.Deserialize<List<string>>() ?? new List<string>();
             }
 
             var step = new EditFilePlanStep(
@@ -56,7 +56,7 @@ public class Plan
 
             if (!string.IsNullOrEmpty(relevantFiles) || relevantFiles != "[]") // TODO code smell
             {
-                relevantFilePaths = JsonSerializer.Deserialize<List<string>>(relevantFiles) ?? new List<string>();
+                relevantFilePaths = relevantFiles.Deserialize<List<string>>() ?? new List<string>();
             }
             var step = new CreateFilePlanStep(
                 path: path,

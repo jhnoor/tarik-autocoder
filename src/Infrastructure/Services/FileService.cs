@@ -107,6 +107,32 @@ public class FileService : IFileService
         return await _shellCommandService.GitBranchName(_localDirectory, cancellationToken);
     }
 
+    public async Task<string> DumpFiles(List<PathTo> filePaths, CancellationToken cancellationToken)
+    {
+        if (filePaths.Count == 0)
+        {
+            return "\n";
+        }
+
+        var relevantFiles = await Task.WhenAll(filePaths.Select(file => GetFileContent(file, cancellationToken)));
+        var relevantFilesDump = relevantFiles.Select((content, index) => $"""
+            - {filePaths[index].RelativePath}
+
+            ```
+            {content}
+            ```
+        """);
+
+        return $"""
+    
+            For added context, here are the relevant files:
+
+            <relevantFiles>
+            {string.Join("", relevantFilesDump)}
+            </relevantFiles>
+        """;
+    }
+
     public void Dispose()
     {
         if (_localDirectory != null)

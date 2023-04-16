@@ -1,3 +1,4 @@
+using System.Text.Json;
 using FluentValidation.AspNetCore;
 using NSwag;
 using Tarik.Application.Common;
@@ -20,7 +21,11 @@ builder.Services.AddInfrastructureServices();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddHealthChecks();
 builder.Services.AddFluentValidationAutoValidation();
-builder.Services.AddControllers();
+builder.Services.AddControllers().AddJsonOptions(opt =>
+{
+    opt.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+    opt.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+});
 
 builder.Services.AddRazorPages();
 builder.Services.AddSwaggerDocument(config => config.PostProcess = document =>
