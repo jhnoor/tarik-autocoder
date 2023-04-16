@@ -4,8 +4,8 @@ In order to assess Tarik's progress, we will use a list of increasingly difficul
 
 1. ✅ [**Create a Hello World web page**](https://github.com/tarik-tasktopr/hello-world/issues/1)
 1. ✅ [**Implement a basic calculator app**](https://github.com/tarik-tasktopr/calculator/issues/1)
-1. ⏳ Create a simple to-do list app
-1. Integrate a third-party API into your application (e.g., weather or maps API)
+1. ✅ [**Create a simple to-do list app**](https://github.com/tarik-tasktopr/to-do-list/issues/1)
+1. ⏳ Integrate a third-party API into your application (e.g., weather or maps API)
 1. Create a real-time chat application using web sockets
 1. Implement user authentication and authorization in a web application
 1. Analyze an application and make performance, logging, metrics, tracing, and security fixes
