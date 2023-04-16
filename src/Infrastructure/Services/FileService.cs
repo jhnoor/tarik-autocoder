@@ -40,7 +40,7 @@ public class FileService : IFileService
     {
         var currentUser = await _gitHubClient.User.Current();
         string repositoryWithPATUrl = $"https://tarik-tasktopr:{_gitHubPAT}@github.com/{_workItem.RepositoryOwner}/{_workItem.RepositoryName}.git";
-        string branchName = $"tarik/{_workItem.Id}-{_workItem.Title.ToLower().Replace(' ', '-')}";
+        string branchName = $"tarik/{_workItem.Id}-{_workItem.Title.ToLower().Replace(' ', '-').Replace(',', '-').Replace('.', '-')}";
 
         await _shellCommandService.GitClone(repositoryWithPATUrl, _localDirectory, cancellationToken);
         await _shellCommandService.GitConfig(currentUser.Name, currentUser.Email, _localDirectory, cancellationToken);
