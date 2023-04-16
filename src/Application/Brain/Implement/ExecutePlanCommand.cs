@@ -58,9 +58,9 @@ public class ExecutePlanCommand : IRequest<Unit>
                 Plan plan = await ParsePlan(request.WorkItem, localDirectory, cancellationToken);
                 string shortTermMemory = _shortTermMemoryService.Dump();
 
-                List<MutateFilePlanStep> initialPassMutateSteps = plan.EditFileSteps
+                List<MutateFilePlanStep> initialPassMutateSteps = plan.CreateFileSteps
                     .OfType<MutateFilePlanStep>()
-                    .Concat(plan.CreateFileSteps.OfType<MutateFilePlanStep>())
+                    .Concat(plan.EditFileSteps.OfType<MutateFilePlanStep>())
                     .ToList();
 
                 Dictionary<PathTo, List<RelevantFile>> mutatedFiles = new();
