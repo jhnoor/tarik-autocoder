@@ -208,7 +208,7 @@ public class ExecutePlanCommand : IRequest<Unit>
                 _logger.LogDebug($"Found approved plan for work item {workItem.Id}");
                 _logger.LogDebug(approvedPlanComment.Body);
 
-                return new Plan(approvedPlanComment.Body, localDirectory);
+                return new Plan(approvedPlanComment.Body, workItem.Title, workItem.Body, localDirectory);
             }
             catch (Exception e)
             {
