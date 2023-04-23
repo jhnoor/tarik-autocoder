@@ -4,10 +4,7 @@ namespace Tarik.Application.Common;
 
 public class Generation
 {
-    [JsonInclude]
     public string Content { get; set; }
-
-    [JsonInclude]
     public List<RelevantFile> RelevantFiles { get; set; }
 
     public Generation(string content, List<RelevantFile> relevantFiles)
