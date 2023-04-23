@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using OpenAI.GPT3.Interfaces;
 using OpenAI.GPT3.ObjectModels;
@@ -10,43 +11,52 @@ using TiktokenSharp;
 
 namespace Tarik.Infrastructure;
 
-public class ShortTermMemoryService : IShortTermMemoryService
+public class ShortTermMemoryService : IShortTermMemoryService, IAsyncDisposable
 {
     private readonly IOpenAIService _openAIService;
     private readonly IAsyncPolicy _retryPolicy;
     private readonly ILogger<ShortTermMemoryService> _logger;
-    private readonly Dictionary<string, (string fileHash, string text)> _memory;
+    private readonly Dictionary<string, Dictionary<string, FileData>> _memory;
 
     public ShortTermMemoryService(IOpenAIService openAIService, ILogger<ShortTermMemoryService> logger)
     {
         _logger = logger;
         _openAIService = openAIService;
         _retryPolicy = RetryPolicies.CreateRetryPolicy(2, _logger);
-        _memory = new Dictionary<string, (string fileHash, string text)>();
+        _memory = LoadMemoryFromFileAsync();
     }
 
-    public string Dump()
+    public string Dump(string repoOwner, string repoName)
     {
+        var repoMemory = getMemoryForRepo(repoOwner, repoName);
+
+        if (repoMemory.Count == 0)
+        {
+            return "";
+        }
+
         return $"""
-        {_memory.Count} files in short-term memory:
-        {string.Join(Environment.NewLine, _memory.Select(x => $"{x.Key} => {x.Value.text}"))}
+        {repoMemory.Count} files in short-term memory:
+        {string.Join(Environment.NewLine, repoMemory.Select(x => $"{x.Key} => {x.Value.Text}"))}
         """;
     }
 
-    public string? Recall(PathTo path, string fileHash)
+    public string? Recall(string repoOwner, string repoName, PathTo path, string fileHash)
     {
-        if (_memory.TryGetValue(path.RelativePath, out var value))
+        var repoMemory = getMemoryForRepo(repoOwner, repoName);
+
+        if (repoMemory.TryGetValue(path.RelativePath, out var value))
         {
-            if (value.fileHash == fileHash)
+            if (value.FileHash == fileHash)
             {
-                return value.text;
+                return value.Text;
             }
         }
 
         return null;
     }
 
-    public async Task Memorize(PathTo path, CancellationToken cancellationToken)
+    public async Task Memorize(string repoOwner, string repoName, PathTo path, CancellationToken cancellationToken)
     {
         // using md5 get hash of file in path
         using var md5 = MD5.Create();
@@ -54,13 +64,14 @@ public class ShortTermMemoryService : IShortTermMemoryService
         string content = await File.ReadAllTextAsync(path.AbsolutePath, cancellationToken);
         string fileHash = Convert.ToBase64String(md5.ComputeHash(Encoding.UTF8.GetBytes(content)));
 
-        if (Recall(path, fileHash) == null)
+        if (Recall(repoOwner, repoName, path, fileHash) == null)
         {
             _logger.LogInformation($"File {path.RelativePath} has changed, summarizing");
             // if hash is not in memory, summarize file
             string summary = await Summarize(path, fileHash, content, cancellationToken);
             // store hash in memory
-            _memory[path.RelativePath] = (fileHash, summary);
+            var repoMemory = getMemoryForRepo(repoOwner, repoName);
+            repoMemory[path.RelativePath] = new FileData(fileHash, summary);
         }
         else
         {
@@ -106,5 +117,39 @@ public class ShortTermMemoryService : IShortTermMemoryService
         }
 
         return chatResponse.Choices[0].Message.Content;
+    }
+
+    private Dictionary<string, FileData> getMemoryForRepo(string repoOwner, string repoName)
+    {
+        string repoId = repoIdentifier(repoOwner, repoName);
+        if (!_memory.ContainsKey(repoId))
+        {
+            _memory[repoId] = new Dictionary<string, FileData>();
+        }
+
+        return _memory[repoId];
+    }
+
+    private Dictionary<string, Dictionary<string, FileData>> LoadMemoryFromFileAsync()
+    {
+        string filePath = "short_term_memory_data.json";
+
+        if (File.Exists(filePath))
+        {
+            string serializedMemory = File.ReadAllText(filePath);
+            return JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, FileData>>>(serializedMemory) ?? new Dictionary<string, Dictionary<string, FileData>>();
+        }
+
+        return new Dictionary<string, Dictionary<string, FileData>>();
+    }
+
+    private static string repoIdentifier(string repoOwner, string repoName) => $"{repoOwner}/{repoName}";
+
+    public async ValueTask DisposeAsync()
+    {
+        string filePath = "short_term_memory_data.json";
+        var jsonOptions = new JsonSerializerOptions { WriteIndented = true };
+        string serializedMemory = JsonSerializer.Serialize(_memory, jsonOptions);
+        await File.WriteAllTextAsync(filePath, serializedMemory);
     }
 }

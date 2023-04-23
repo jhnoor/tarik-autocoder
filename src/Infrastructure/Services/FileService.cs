@@ -11,7 +11,6 @@ public class FileService : IFileService
     private readonly string _localDirectory;
     private readonly IGitHubClient _gitHubClient;
     private readonly string _gitHubPAT;
-    private readonly WorkItem _workItem;
     private readonly IShellCommandService _shellCommandService;
     private readonly IShortTermMemoryService _shortTermMemoryService;
     private readonly ILogger<IFileService> _logger;
@@ -27,20 +26,43 @@ public class FileService : IFileService
     {
         _logger = logger;
         _gitHubPAT = gitHubPAT;
-        _workItem = workItem;
         _shellCommandService = shellCommandService;
         _shortTermMemoryService = shortTermMemoryService;
         _gitHubClient = gitHubClientFactory.CreateGitHubClient();
         _localDirectory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         Directory.CreateDirectory(_localDirectory);
-        CloneRepository(CancellationToken.None).GetAwaiter().GetResult();
+        CloneNewRepository(workItem, CancellationToken.None).GetAwaiter().GetResult();
     }
 
-    private async Task CloneRepository(CancellationToken cancellationToken)
+    public FileService(string gitHubPAT, ReviewPullRequest pr, IGitHubClientFactory gitHubClientFactory, IShellCommandService shellCommandService, IShortTermMemoryService shortTermMemoryService, ILogger<IFileService> logger)
+    {
+        _gitHubPAT = gitHubPAT;
+        _gitHubClient = gitHubClientFactory.CreateGitHubClient();
+        _shellCommandService = shellCommandService;
+        _shortTermMemoryService = shortTermMemoryService;
+        _logger = logger;
+
+        _localDirectory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        Directory.CreateDirectory(_localDirectory);
+        CloneExistingRepository(pr, CancellationToken.None).GetAwaiter().GetResult();
+    }
+
+    private async Task CloneExistingRepository(ReviewPullRequest pr, CancellationToken cancellationToken)
     {
         var currentUser = await _gitHubClient.User.Current();
-        string repositoryWithPATUrl = $"https://tarik-tasktopr:{_gitHubPAT}@github.com/{_workItem.RepositoryOwner}/{_workItem.RepositoryName}.git";
-        string branchName = $"tarik/{_workItem.Id}-{_workItem.Title.ToLower().Replace(' ', '-').Replace(',', '-').Replace('.', '-')}";
+        string repositoryWithPATUrl = $"https://tarik-tasktopr:{_gitHubPAT}@github.com/{pr.RepositoryOwner}/{pr.RepositoryName}.git";
+        string branchName = pr.BranchName;
+
+        await _shellCommandService.GitClone(repositoryWithPATUrl, _localDirectory, cancellationToken);
+        await _shellCommandService.GitConfig(currentUser.Name, currentUser.Email, _localDirectory, cancellationToken);
+        await _shellCommandService.GitCheckout(branchName, _localDirectory, cancellationToken);
+    }
+
+    private async Task CloneNewRepository(WorkItem workItem, CancellationToken cancellationToken)
+    {
+        var currentUser = await _gitHubClient.User.Current();
+        string repositoryWithPATUrl = $"https://tarik-tasktopr:{_gitHubPAT}@github.com/{workItem.RepositoryOwner}/{workItem.RepositoryName}.git";
+        string branchName = $"tarik/{workItem.Id}-{workItem.Title.ToLower().Replace(' ', '-').Replace(',', '-').Replace('.', '-')}";
 
         await _shellCommandService.GitClone(repositoryWithPATUrl, _localDirectory, cancellationToken);
         await _shellCommandService.GitConfig(currentUser.Name, currentUser.Email, _localDirectory, cancellationToken);

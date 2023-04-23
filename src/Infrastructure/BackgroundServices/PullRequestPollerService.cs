@@ -7,21 +7,27 @@ using Tarik.Application.Common;
 
 namespace Tarik.Infrastructure;
 
-public class WorkItemPollerService : BackgroundService
+public class PullRequestPollerService : BackgroundService
 {
-    private readonly ILogger<WorkItemPollerService> _logger;
-    private readonly IWorkItemService _workItemApiClient;
+    private readonly ILogger<PullRequestPollerService> _logger;
+    private readonly IPullRequestService _pullRequestService;
+    private readonly IWorkItemService _workItemService;
+    private readonly IFileServiceFactory _fileServiceFactory;
     private readonly ISender _mediator;
     private readonly TimeSpan _pollingInterval;
 
-    public WorkItemPollerService(
-        ILogger<WorkItemPollerService> logger,
-        IWorkItemService workItemApiClient,
+    public PullRequestPollerService(
+        ILogger<PullRequestPollerService> logger,
+        IFileServiceFactory fileServiceFactory,
+        IPullRequestService pullRequestService,
+        IWorkItemService workItemService,
         IOptions<AppSettings> appSettings,
         ISender mediator)
     {
         _logger = logger;
-        _workItemApiClient = workItemApiClient;
+        _fileServiceFactory = fileServiceFactory;
+        _pullRequestService = pullRequestService;
+        _workItemService = workItemService;
         _mediator = mediator;
         if (appSettings.Value.WorkItemPollingIntervalInMinutes == null)
         {
@@ -37,14 +43,17 @@ public class WorkItemPollerService : BackgroundService
         {
             try
             {
-                _logger.LogInformation("Polling for assigned work items...");
+                _logger.LogInformation("Polling for assigned pull requests...");
 
-                var workItems = await _workItemApiClient.GetIssuesAssignedToTarik(cancellationToken);
+                var pullRequests = await _pullRequestService.GetPrsAssignedToTarikForReview(cancellationToken);
 
-                foreach (var workItem in workItems)
+                foreach (var pr in pullRequests)
                 {
-                    _logger.LogInformation($"Processing work item: #{workItem.Id}: {workItem.Title}. Labels: {string.Join(", ", workItem.Labels)}");
-                    await _mediator.Send(new WorkItemStateMachineCommand(workItem), cancellationToken);
+                    using IFileService fileService = _fileServiceFactory.CreateFileService(pr);
+
+                    _logger.LogInformation($"Reviewing my pr: #{pr.Id}: {pr.Title}.");
+                    await _mediator.Send(new PullRequestReviewCommand(pr, fileService), cancellationToken);
+                    // TODO state machine for prs
                 }
             }
             catch (Exception ex)

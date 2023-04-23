@@ -4,29 +4,29 @@ using Tarik.Application.Common;
 
 namespace Tarik.Application.Brain;
 
-public class WorkCommand : IRequest<Unit>
+public class WorkItemStateMachineCommand : IRequest<Unit>
 {
-    public WorkCommand(WorkItem workItem)
+    public WorkItemStateMachineCommand(WorkItem workItem)
     {
         WorkItem = workItem;
     }
 
     public WorkItem WorkItem { get; }
 
-    public class WorkCommandHandler : IRequestHandler<WorkCommand>
+    public class WorkItemStateMachineCommandHandler : IRequestHandler<WorkItemStateMachineCommand>
     {
         private readonly ISender _mediator;
-        private readonly ILogger<WorkCommandHandler> _logger;
+        private readonly ILogger<WorkItemStateMachineCommandHandler> _logger;
 
-        public WorkCommandHandler(
+        public WorkItemStateMachineCommandHandler(
             ISender mediator,
-            ILogger<WorkCommandHandler> logger)
+            ILogger<WorkItemStateMachineCommandHandler> logger)
         {
             _mediator = mediator;
             _logger = logger;
         }
 
-        public async Task<Unit> Handle(WorkCommand request, CancellationToken cancellationToken)
+        public async Task<Unit> Handle(WorkItemStateMachineCommand request, CancellationToken cancellationToken)
         {
             var state = RetrieveStateFromLabels(request.WorkItem.Labels);
 

@@ -31,4 +31,16 @@ public class FileServiceFactory : IFileServiceFactory
             _serviceProvider.GetRequiredService<IShortTermMemoryService>(),
             _serviceProvider.GetRequiredService<ILogger<IFileService>>());
     }
+
+    public IFileService CreateFileService(ReviewPullRequest pr)
+    {
+        return new FileService(
+            _gitHubPAT,
+            pr,
+            _serviceProvider.GetRequiredService<IGitHubClientFactory>(),
+            _serviceProvider.GetRequiredService<IShellCommandService>(),
+            _serviceProvider.GetRequiredService<IShortTermMemoryService>(),
+            _serviceProvider.GetRequiredService<ILogger<IFileService>>()
+        );
+    }
 }

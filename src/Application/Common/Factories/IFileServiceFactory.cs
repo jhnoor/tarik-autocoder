@@ -7,4 +7,5 @@ public interface IFileServiceFactory
     /// FileServices are scoped to a <see cref="WorkItem"/>.
     /// </summary>
     IFileService CreateFileService(WorkItem workItem);
+    IFileService CreateFileService(ReviewPullRequest pr);
 }

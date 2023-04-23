@@ -20,6 +20,7 @@ public static class DependencyInjection
         services.AddOpenAIService().ConfigureHttpClient(client => client.Timeout = TimeSpan.FromMinutes(3));
 
         services.AddHostedService<WorkItemPollerService>();
+        services.AddHostedService<PullRequestPollerService>();
 
         return services;
     }

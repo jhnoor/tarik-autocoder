@@ -56,7 +56,7 @@ public class ExecutePlanCommand : IRequest<Unit>
                 string branchName = await fileService.BranchName(cancellationToken);
                 string localDirectory = fileService.LocalDirectory();
                 Plan plan = await ParsePlan(request.WorkItem, localDirectory, cancellationToken);
-                string shortTermMemory = _shortTermMemoryService.Dump();
+                string shortTermMemory = _shortTermMemoryService.Dump(request.WorkItem.RepositoryOwner, request.WorkItem.RepositoryName);
 
                 List<MutateFilePlanStep> initialPassMutateSteps = plan.CreateFileSteps
                     .OfType<MutateFilePlanStep>()
@@ -68,7 +68,7 @@ public class ExecutePlanCommand : IRequest<Unit>
                 // First pass
                 foreach (var mutateStep in initialPassMutateSteps)
                 {
-                    var generation = await Mutate(mutateStep, plan, fileService, shortTermMemory, cancellationToken);
+                    var generation = await Mutate(mutateStep, plan, fileService, shortTermMemory, request.WorkItem, cancellationToken);
 
                     if (generation == null)
                     {
@@ -93,7 +93,7 @@ public class ExecutePlanCommand : IRequest<Unit>
                 // Second pass
                 foreach (var mutateStep in secondPassMutateSteps)
                 {
-                    await Mutate(mutateStep, plan, fileService, shortTermMemory, cancellationToken);
+                    await Mutate(mutateStep, plan, fileService, shortTermMemory, request.WorkItem, cancellationToken);
                 }
 
                 await fileService.Push(cancellationToken);
@@ -113,7 +113,7 @@ public class ExecutePlanCommand : IRequest<Unit>
             }
         }
 
-        private async Task<Generation?> Mutate(MutateFilePlanStep mutateStep, Plan plan, IFileService fileService, string shortTermMemory, CancellationToken cancellationToken)
+        private async Task<Generation?> Mutate(MutateFilePlanStep mutateStep, Plan plan, IFileService fileService, string shortTermMemory, WorkItem workItem, CancellationToken cancellationToken)
         {
             var context = new Context { ["RetryCount"] = 0 };
             var generation = await _retryPolicy
@@ -135,7 +135,7 @@ public class ExecutePlanCommand : IRequest<Unit>
                 await fileService.EditFile(editFileStep, cancellationToken);
             }
 
-            await _shortTermMemoryService.Memorize(mutateStep.PathTo, cancellationToken);
+            await _shortTermMemoryService.Memorize(workItem.RepositoryOwner, workItem.RepositoryName, mutateStep.PathTo, cancellationToken);
             return generation;
         }
 

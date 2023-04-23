@@ -45,7 +45,7 @@ public class PlanWorkCommand : IRequest<Unit>
         {
             _logger.LogDebug($"Planning work for work item {request.WorkItem.Id}");
             IFileService fileService = _fileServiceFactory.CreateFileService(request.WorkItem);
-            string shortTermMemory = _shortTermMemoryService.Dump();
+            string shortTermMemory = _shortTermMemoryService.Dump(request.WorkItem.RepositoryOwner, request.WorkItem.RepositoryName);
             string planningPrompt = request.WorkItem.GetPlanningPrompt(shortTermMemory);
             IAsyncPolicy retryPolicy = RetryPolicies.CreateRetryPolicy(2, _logger);
 

@@ -49,7 +49,11 @@ public class UnderstandRepositoryCommand : IRequest<Unit>
 
             foreach (var path in paths)
             {
-                await _shortTermMemoryService.Memorize(path, cancellationToken);
+                await _shortTermMemoryService.Memorize(
+                    request.WorkItem.RepositoryOwner,
+                    request.WorkItem.RepositoryName,
+                    path,
+                    cancellationToken);
             }
 
             await _workItemApiClient.Label(request.WorkItem, StateMachineLabel.AutoCodePlanning, cancellationToken);
