@@ -30,8 +30,9 @@ public static class PlanningPrompts
                 * Edit the file /path/to/file
                 * Delete the file /path/to/file
 
+            And /path/to/file is the full path to the file.
             And <reason> is the relevant reason for creating, editing or deleting this file according to the plan. 
-            And [<relevant_files>] is a list of other relevant files at this step (e.g. ["/a.cs", "/b.js"]).
+            And [<relevant_files>] is a list of paths to other relevant files at this step (e.g. ["/a.cs", "/b.js"]).
             Ensure that the order of the steps is sensible.
                         
             Here's the work item you are planning for:
