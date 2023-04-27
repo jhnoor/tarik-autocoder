@@ -28,8 +28,8 @@ public class ShortTermMemoryService : IShortTermMemoryService
     public string Dump()
     {
         return $"""
-        {_memory.Count} files in short-term memory:
-        {string.Join(Environment.NewLine, _memory.Select(x => $"{x.Key} => {x.Value.text}"))}
+        {_memory.Count} files in repository, here are all the paths:
+        {string.Join(Environment.NewLine, _memory.Select(x => $"{x.Key}"))}
         """;
     }
 
