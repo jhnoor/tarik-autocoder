@@ -58,7 +58,8 @@ public class ShortTermMemoryService : IShortTermMemoryService
         {
             _logger.LogInformation($"File {path.RelativePath} has changed, summarizing");
             // if hash is not in memory, summarize file
-            string summary = await Summarize(path, fileHash, content, cancellationToken);
+            string summary = "";
+            // await Summarize(path, fileHash, content, cancellationToken);
             // store hash in memory
             _memory[path.RelativePath] = (fileHash, summary);
         }
